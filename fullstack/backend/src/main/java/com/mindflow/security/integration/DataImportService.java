@@ -3,6 +3,8 @@ package com.mindflow.security.integration;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mindflow.security.admin.AdminControlService;
+import com.mindflow.security.search.TransitStopEntity;
+import com.mindflow.security.search.TransitStopRepository;
 import com.mindflow.security.monitoring.ObservabilityService;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
@@ -31,6 +33,7 @@ public class DataImportService {
     private final CleaningAuditRepository cleaningAuditRepository;
     private final StopStructureVersionRepository stopStructureVersionRepository;
     private final AdminControlService adminControlService;
+    private final TransitStopRepository transitStopRepository;
     private final ObjectMapper objectMapper;
     private final MeterRegistry meterRegistry;
     private final ObservabilityService observabilityService;
@@ -40,6 +43,7 @@ public class DataImportService {
                              CleaningAuditRepository cleaningAuditRepository,
                              StopStructureVersionRepository stopStructureVersionRepository,
                              AdminControlService adminControlService,
+                             TransitStopRepository transitStopRepository,
                              ObjectMapper objectMapper,
                              MeterRegistry meterRegistry,
                              ObservabilityService observabilityService) {
@@ -48,6 +52,7 @@ public class DataImportService {
         this.cleaningAuditRepository = cleaningAuditRepository;
         this.stopStructureVersionRepository = stopStructureVersionRepository;
         this.adminControlService = adminControlService;
+        this.transitStopRepository = transitStopRepository;
         this.objectMapper = objectMapper;
         this.meterRegistry = meterRegistry;
         this.observabilityService = observabilityService;
@@ -157,8 +162,8 @@ public class DataImportService {
         String price = mapped(map, "price", "rent", "monthly_price");
 
         String cleanStop = normalizeOrNull("stop_name", stop, raw.sourceRef(), jobId, notes);
-        String cleanAddress = normalizeOrNull("address", address, raw.sourceRef(), jobId, notes);
-        String cleanApartment = normalizeOrNull("apartment_type", apartment, raw.sourceRef(), jobId, notes);
+        String cleanAddress = normalizeOrNull("address", applyDictionary("address", address), raw.sourceRef(), jobId, notes);
+        String cleanApartment = normalizeOrNull("apartment_type", applyDictionary("apartment_type", apartment), raw.sourceRef(), jobId, notes);
         String cleanArea = normalizeArea(area, raw.sourceRef(), jobId, notes);
         String cleanPrice = normalizePrice(price, raw.sourceRef(), jobId, notes);
 
@@ -177,6 +182,80 @@ public class DataImportService {
         versionFieldIfChanged(cleanStop, "apartment_type", cleanApartment, jobId);
         versionFieldIfChanged(cleanStop, "area_standardized", cleanArea, jobId);
         versionFieldIfChanged(cleanStop, "price_standardized", cleanPrice, jobId);
+
+        upsertTransitStop(cleanStop, cleanAddress, cleanApartment);
+    }
+
+    private void upsertTransitStop(String stopName, String address, String apartmentType) {
+        if (stopName == null || stopName.isBlank() || "NULL".equalsIgnoreCase(stopName)) {
+            return;
+        }
+        String normalizedStop = stopName.trim();
+
+        TransitStopEntity stop = transitStopRepository.findTopByStopNameIgnoreCase(normalizedStop)
+                .orElseGet(TransitStopEntity::new);
+
+        if (stop.getRouteNumber() == null || stop.getRouteNumber().isBlank()) {
+            stop.setRouteNumber("IMP-" + Math.abs(normalizedStop.toLowerCase(Locale.ROOT).hashCode() % 1000));
+        }
+        stop.setStopName(normalizedStop);
+        stop.setPinyin(toAsciiWords(normalizedStop));
+        stop.setInitials(toInitials(normalizedStop));
+        stop.setKeywords(buildKeywords(address, apartmentType, normalizedStop));
+        if (stop.getFrequencyPriority() <= 0) {
+            stop.setFrequencyPriority(50);
+        }
+        if (stop.getStopPopularity() <= 0) {
+            stop.setStopPopularity(300);
+        }
+        transitStopRepository.save(stop);
+    }
+
+    private String buildKeywords(String address, String apartmentType, String stopName) {
+        String mappedApartment = applyDictionary("apartment_type", apartmentType);
+        String mappedAddress = applyDictionary("address", address);
+        return String.join(",",
+                safeKeyword(stopName),
+                safeKeyword(mappedAddress),
+                safeKeyword(mappedApartment));
+    }
+
+    private String applyDictionary(String category, String rawValue) {
+        if (rawValue == null || rawValue.isBlank()) {
+            return rawValue;
+        }
+        String trimmed = rawValue.trim();
+        return adminControlService.resolveDictionaryValue(category, trimmed)
+                .orElse(trimmed);
+    }
+
+    private String safeKeyword(String value) {
+        if (value == null || value.isBlank()) {
+            return "unknown";
+        }
+        return value.trim().toLowerCase(Locale.ROOT).replaceAll("\\s+", " ");
+    }
+
+    private String toAsciiWords(String value) {
+        if (value == null || value.isBlank()) {
+            return "stop";
+        }
+        String normalized = value.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9 ]", " ").replaceAll("\\s+", " ").trim();
+        return normalized.isBlank() ? "stop" : normalized;
+    }
+
+    private String toInitials(String value) {
+        if (value == null || value.isBlank()) {
+            return "s";
+        }
+        String[] parts = toAsciiWords(value).split(" ");
+        StringBuilder initials = new StringBuilder();
+        for (String part : parts) {
+            if (!part.isBlank()) {
+                initials.append(part.charAt(0));
+            }
+        }
+        return initials.isEmpty() ? "s" : initials.toString();
     }
 
     private void versionFieldIfChanged(String stopName, String fieldName, String newValue, Long jobId) {

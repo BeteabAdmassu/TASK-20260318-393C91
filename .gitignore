@@ -1,3 +1,15 @@
 .env
 .env.*
 !.env.example
+
+# Maven/Java
+target/
+*.class
+*.jar
+*.war
+*.ear
+*.log
+.mvn/
+mvn.cmd
+mvnw
+mvnw.cmd

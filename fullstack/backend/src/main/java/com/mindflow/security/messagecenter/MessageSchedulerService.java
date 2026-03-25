@@ -1,5 +1,8 @@
 package com.mindflow.security.messagecenter;
 
+import com.mindflow.security.admin.TemplateResponse;
+import com.mindflow.security.admin.AdminControlService;
+import com.mindflow.security.message.SensitivityLevel;
 import com.mindflow.security.notification.NotificationRuleService;
 import com.mindflow.security.notification.NotificationType;
 import com.mindflow.security.user.UserEntity;
@@ -20,26 +23,35 @@ public class MessageSchedulerService {
     private final UserRepository userRepository;
     private final MessageQueueService queueService;
     private final NotificationRuleService notificationRuleService;
+    private final AdminControlService adminControlService;
 
     public MessageSchedulerService(BookingEventRepository bookingRepository,
                                    UserRepository userRepository,
                                    MessageQueueService queueService,
-                                   NotificationRuleService notificationRuleService) {
+                                   NotificationRuleService notificationRuleService,
+                                   AdminControlService adminControlService) {
         this.bookingRepository = bookingRepository;
         this.userRepository = userRepository;
         this.queueService = queueService;
         this.notificationRuleService = notificationRuleService;
+        this.adminControlService = adminControlService;
     }
 
     @Scheduled(fixedDelayString = "${app.message.scheduler-ms:60000}")
     @Transactional
     public void generateReservationSuccessMessages() {
         for (BookingEventEntity booking : bookingRepository.findByReservationSuccessSentFalse()) {
+            TemplateResponse template = adminControlService.resolveTemplate(
+                    "reservation.success",
+                    "Reservation Confirmed",
+                    "Reservation for route {route} confirmed. Reference token {phoneToken}"
+            );
             queueService.enqueue(
                     booking.getUsername(),
                     MessageType.RESERVATION_SUCCESS,
-                    "Reservation Confirmed",
-                    "Reservation for route " + booking.getRouteNumber() + " confirmed. Reference token " + shortToken(booking.getPassengerPhoneToken())
+                    template.subject(),
+                    applyTemplate(template.body(), booking),
+                    SensitivityLevel.HIGH
             );
             booking.setReservationSuccessSent(true);
             bookingRepository.save(booking);
@@ -63,11 +75,17 @@ public class MessageSchedulerService {
             LocalTime currentLocal = LocalTime.ofInstant(now, ZoneId.systemDefault());
             boolean allowed = notificationRuleService.isNotificationAllowed(user, NotificationType.ARRIVAL_REMINDER, currentLocal);
             if (allowed) {
+                TemplateResponse template = adminControlService.resolveTemplate(
+                        "arrival.reminder",
+                        "Arrival Reminder",
+                        "Your bus on route {route} arrives in {leadMinutes} minutes. Ref {phoneToken}"
+                );
                 queueService.enqueue(
                         booking.getUsername(),
                         MessageType.ARRIVAL_REMINDER,
-                        "Arrival Reminder",
-                        "Your bus on route " + booking.getRouteNumber() + " arrives in " + user.getReminderLeadMinutes() + " minutes. Ref " + shortToken(booking.getPassengerPhoneToken())
+                        template.subject(),
+                        applyTemplate(template.body(), booking, user),
+                        SensitivityLevel.MEDIUM
                 );
             }
             booking.setArrivalReminderSent(true);
@@ -80,15 +98,32 @@ public class MessageSchedulerService {
     public void generateMissedCheckIns() {
         Instant now = Instant.now().minusSeconds(300);
         for (BookingEventEntity booking : bookingRepository.findByMissedCheckInSentFalseAndStartTimeBefore(now)) {
+            TemplateResponse template = adminControlService.resolveTemplate(
+                    "missed.checkin",
+                    "Missed Check-In",
+                    "You missed check-in for route {route}. Please rebook if needed."
+            );
             queueService.enqueue(
                     booking.getUsername(),
                     MessageType.MISSED_CHECK_IN,
-                    "Missed Check-In",
-                    "You missed check-in for route " + booking.getRouteNumber() + ". Please rebook if needed."
+                    template.subject(),
+                    applyTemplate(template.body(), booking),
+                    SensitivityLevel.LOW
             );
             booking.setMissedCheckInSent(true);
             bookingRepository.save(booking);
         }
+    }
+
+    private String applyTemplate(String body, BookingEventEntity booking) {
+        return body
+                .replace("{route}", booking.getRouteNumber())
+                .replace("{phoneToken}", shortToken(booking.getPassengerPhoneToken()));
+    }
+
+    private String applyTemplate(String body, BookingEventEntity booking, UserEntity user) {
+        return applyTemplate(body, booking)
+                .replace("{leadMinutes}", String.valueOf(user.getReminderLeadMinutes()));
     }
 
     private String shortToken(String token) {

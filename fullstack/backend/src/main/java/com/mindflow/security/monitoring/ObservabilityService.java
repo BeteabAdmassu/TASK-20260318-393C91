@@ -54,7 +54,7 @@ public class ObservabilityService {
 
         Timer timer = meterRegistry.find("app.api.request.duration").timer();
         if (timer != null) {
-            long p95Ms = Math.round(extractPercentileMs(timer, 0.95));
+            long p95Ms = Math.round(readApiP95Ms(timer));
             if (p95Ms > MAX_REASONABLE_P95_MS) {
                 log.warn("event=alert-skip type=API_P95 reason=unrealistic_value valueMs={}", p95Ms);
                 return;
@@ -64,6 +64,14 @@ public class ObservabilityService {
                         "API p95 latency is " + p95Ms + "ms which exceeds threshold " + properties.getApiP95ThresholdMs() + "ms");
             }
         }
+    }
+
+    private double readApiP95Ms(Timer timer) {
+        double fromTimer = timer.percentile(0.95, TimeUnit.MILLISECONDS);
+        if (Double.isFinite(fromTimer) && fromTimer > 0) {
+            return fromTimer;
+        }
+        return extractPercentileMs(timer, 0.95);
     }
 
     @Transactional(readOnly = true)

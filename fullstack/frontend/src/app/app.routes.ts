@@ -6,14 +6,16 @@ import { DispatcherDashboardComponent } from './dispatcher-dashboard.component';
 import { MessageCenterComponent } from './message-center.component';
 import { AdminControlComponent } from './admin-control.component';
 import { ObservabilityComponent } from './observability.component';
+import { authGuard } from './auth.guard';
+import { roleGuard } from './role.guard';
 
 export const appRoutes: Routes = [
   { path: '', component: LoginComponent },
-  { path: 'dashboard', component: DashboardComponent },
-  { path: 'settings', component: SettingsComponent },
-  { path: 'dispatcher', component: DispatcherDashboardComponent },
-  { path: 'messages', component: MessageCenterComponent },
-  { path: 'admin', component: AdminControlComponent },
-  { path: 'observability', component: ObservabilityComponent },
+  { path: 'dashboard', component: DashboardComponent, canActivate: [authGuard] },
+  { path: 'settings', component: SettingsComponent, canActivate: [authGuard] },
+  { path: 'dispatcher', component: DispatcherDashboardComponent, canActivate: [authGuard, roleGuard], data: { roles: ['DISPATCHER', 'ADMIN'] } },
+  { path: 'messages', component: MessageCenterComponent, canActivate: [authGuard] },
+  { path: 'admin', component: AdminControlComponent, canActivate: [authGuard, roleGuard], data: { roles: ['ADMIN'] } },
+  { path: 'observability', component: ObservabilityComponent, canActivate: [authGuard, roleGuard], data: { roles: ['ADMIN'] } },
   { path: '**', redirectTo: '' }
 ];

@@ -5,6 +5,9 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
 
 @Service
 public class AdminControlService {
@@ -127,6 +130,32 @@ public class AdminControlService {
     @Transactional
     public void deleteDictionary(Long id) {
         dictionaryRepository.deleteById(id);
+    }
+
+    @Transactional(readOnly = true)
+    public TemplateResponse resolveTemplate(String templateKey, String fallbackSubject, String fallbackBody) {
+        return templateRepository.findByTemplateKey(templateKey)
+                .map(this::toTemplateResponse)
+                .orElse(new TemplateResponse(null, templateKey, fallbackSubject, fallbackBody));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<String> resolveDictionaryValue(String category, String code) {
+        if (category == null || category.isBlank() || code == null || code.isBlank()) {
+            return Optional.empty();
+        }
+        return dictionaryRepository.findByCategoryAndCodeAndEnabledTrue(category, code)
+                .map(FieldDictionaryEntity::getItemValue);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, String> dictionaryMap(String category) {
+        if (category == null || category.isBlank()) {
+            return Map.of();
+        }
+        return dictionaryRepository.findByCategoryAndEnabledTrueOrderByCodeAsc(category)
+                .stream()
+                .collect(Collectors.toMap(FieldDictionaryEntity::getCode, FieldDictionaryEntity::getItemValue, (left, right) -> right));
     }
 
     private int getInt(String key, int fallback) {

@@ -23,6 +23,8 @@ import java.security.NoSuchAlgorithmException;
 import java.util.List;
 import java.util.Map;
 
+import com.mindflow.security.user.Role;
+
 @RestController
 @RequestMapping("/api/passenger/messages-center")
 @Validated
@@ -42,7 +44,8 @@ public class MessageCenterController {
     public ResponseEntity<List<MessageResponse>> list(
             @RequestParam(name = "type", required = false) MessageType type,
             Authentication authentication) {
-        return ResponseEntity.ok(messageCenterService.listMessages(authentication.getName(), type));
+        Role role = extractRole(authentication);
+        return ResponseEntity.ok(messageCenterService.listMessages(authentication.getName(), role, type));
     }
 
     @PutMapping("/{id}/read")
@@ -51,7 +54,8 @@ public class MessageCenterController {
             @PathVariable @Positive Long id,
             @Valid @RequestBody MessageReadRequest request,
             Authentication authentication) {
-        return ResponseEntity.ok(messageCenterService.markRead(authentication.getName(), id, request.read()));
+        Role role = extractRole(authentication);
+        return ResponseEntity.ok(messageCenterService.markRead(authentication.getName(), role, id, request.read()));
     }
 
     @DeleteMapping("/{id}")
@@ -93,5 +97,13 @@ public class MessageCenterController {
         } catch (NoSuchAlgorithmException ex) {
             throw new IllegalStateException("SHA-256 unavailable", ex);
         }
+    }
+
+    private Role extractRole(Authentication authentication) {
+        return authentication.getAuthorities().stream()
+                .findFirst()
+                .map(auth -> auth.getAuthority().replace("ROLE_", ""))
+                .map(Role::valueOf)
+                .orElse(Role.PASSENGER);
     }
 }

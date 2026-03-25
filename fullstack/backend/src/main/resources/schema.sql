@@ -39,6 +39,7 @@ CREATE TABLE IF NOT EXISTS messages (
     type VARCHAR(40) NOT NULL CHECK (type IN ('RESERVATION_SUCCESS', 'ARRIVAL_REMINDER', 'MISSED_CHECK_IN')),
     title VARCHAR(160) NOT NULL,
     content VARCHAR(4000) NOT NULL,
+    sensitivity_level VARCHAR(20) NOT NULL DEFAULT 'MEDIUM' CHECK (sensitivity_level IN ('LOW', 'MEDIUM', 'HIGH')),
     trace_id VARCHAR(80) NOT NULL,
     read_flag BOOLEAN NOT NULL DEFAULT FALSE,
     masked BOOLEAN NOT NULL DEFAULT FALSE,
@@ -51,6 +52,7 @@ CREATE TABLE IF NOT EXISTS message_queue_events (
     type VARCHAR(40) NOT NULL CHECK (type IN ('RESERVATION_SUCCESS', 'ARRIVAL_REMINDER', 'MISSED_CHECK_IN')),
     title VARCHAR(160) NOT NULL,
     content VARCHAR(4000) NOT NULL,
+    sensitivity_level VARCHAR(20) NOT NULL DEFAULT 'MEDIUM' CHECK (sensitivity_level IN ('LOW', 'MEDIUM', 'HIGH')),
     trace_id VARCHAR(80) NOT NULL,
     status VARCHAR(20) NOT NULL CHECK (status IN ('PENDING', 'PROCESSED')),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
@@ -189,3 +191,15 @@ ON CONFLICT (config_key) DO NOTHING;
 INSERT INTO system_configs (config_key, config_value)
 VALUES ('cleaning.rule.trim.enabled', 'true')
 ON CONFLICT (config_key) DO NOTHING;
+
+INSERT INTO notification_templates (template_key, subject, body)
+VALUES ('reservation.success', 'Reservation Confirmed', 'Reservation for route {route} confirmed. Reference token {phoneToken}')
+ON CONFLICT (template_key) DO NOTHING;
+
+INSERT INTO notification_templates (template_key, subject, body)
+VALUES ('arrival.reminder', 'Arrival Reminder', 'Your bus on route {route} arrives in {leadMinutes} minutes. Ref {phoneToken}')
+ON CONFLICT (template_key) DO NOTHING;
+
+INSERT INTO notification_templates (template_key, subject, body)
+VALUES ('missed.checkin', 'Missed Check-In', 'You missed check-in for route {route}. Please rebook if needed.')
+ON CONFLICT (template_key) DO NOTHING;

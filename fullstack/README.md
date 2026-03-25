@@ -10,6 +10,7 @@ This deliverable contains a local-only full stack implementation under `fullstac
 
 ```bash
 cd fullstack
+cp .env.example .env
 docker-compose up --build
 ```
 

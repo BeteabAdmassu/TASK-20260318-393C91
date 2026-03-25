@@ -8,13 +8,20 @@ ERROR_LOG="${ROOT_DIR}/unit_tests/error.log"
 > "$ERROR_LOG"
 
 TEST_CLASSES=(
+  "AuthControllerTest"
   "MessagePrivacyServiceTest"
+  "MessageCenterAuthorizationTest"
+  "MessageTemplateRuntimeTest"
   "SearchServiceTest"
   "NotificationRuleServiceTest"
+  "NotificationSettingsControllerTest"
   "RbacAccessTest"
   "ObservabilityServiceTest"
+  "ObservabilityAlertTriggerTest"
   "WorkflowAuthorizationTest"
+  "WorkflowEscalationTest"
   "DataImportServiceTest"
+  "DataIntegrationControllerTest"
   "ApiSecuritySemanticsTest"
 )
 

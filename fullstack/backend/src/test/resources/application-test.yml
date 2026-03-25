@@ -17,3 +17,6 @@ app:
   bootstrap:
     admin:
       enabled: false
+  monitoring:
+    queue-backlog-threshold: 3
+    api-p95-threshold-ms: 500

@@ -2,7 +2,7 @@ import { Injectable, signal } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { Observable, tap } from 'rxjs';
 import { environment } from '../environments/environment';
-import { LoginRequest, LoginResponse } from './auth.models';
+import { LoginRequest, LoginResponse, Role } from './auth.models';
 
 const TOKEN_KEY = 'mindflow_token';
 const ROLE_KEY = 'mindflow_role';
@@ -29,6 +29,15 @@ export class AuthService {
     this.token.set(null);
     this.role.set(null);
     this.username.set(null);
+  }
+
+  isAuthenticated(): boolean {
+    return !!this.token();
+  }
+
+  hasAnyRole(roles: Role[]): boolean {
+    const current = this.role() as Role | null;
+    return current != null && roles.includes(current);
   }
 
   private persistAuth(response: LoginResponse): void {

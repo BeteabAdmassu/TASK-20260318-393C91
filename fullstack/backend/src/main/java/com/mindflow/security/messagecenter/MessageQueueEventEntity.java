@@ -1,5 +1,6 @@
 package com.mindflow.security.messagecenter;
 
+import com.mindflow.security.message.SensitivityLevel;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -32,6 +33,10 @@ public class MessageQueueEventEntity {
 
     @Column(name = "content", nullable = false, length = 4000)
     private String content;
+
+    @Enumerated(EnumType.STRING)
+    @Column(name = "sensitivity_level", nullable = false, length = 20)
+    private SensitivityLevel sensitivityLevel;
 
     @Column(name = "trace_id", nullable = false, length = 80)
     private String traceId;
@@ -86,6 +91,14 @@ public class MessageQueueEventEntity {
 
     public void setContent(String content) {
         this.content = content;
+    }
+
+    public SensitivityLevel getSensitivityLevel() {
+        return sensitivityLevel;
+    }
+
+    public void setSensitivityLevel(SensitivityLevel sensitivityLevel) {
+        this.sensitivityLevel = sensitivityLevel;
     }
 
     public String getTraceId() {

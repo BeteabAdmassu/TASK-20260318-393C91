@@ -1,5 +1,6 @@
 package com.mindflow.security.messagecenter;
 
+import com.mindflow.security.message.SensitivityLevel;
 import com.mindflow.security.monitoring.ObservabilityService;
 import com.mindflow.security.monitoring.TraceContext;
 import io.micrometer.core.instrument.MeterRegistry;
@@ -33,11 +34,17 @@ public class MessageQueueService {
 
     @Transactional
     public void enqueue(String username, MessageType type, String title, String content) {
+        enqueue(username, type, title, content, SensitivityLevel.MEDIUM);
+    }
+
+    @Transactional
+    public void enqueue(String username, MessageType type, String title, String content, SensitivityLevel sensitivityLevel) {
         MessageQueueEventEntity event = new MessageQueueEventEntity();
         event.setUsername(username);
         event.setType(type);
         event.setTitle(title);
-        event.setContent(messageMaskingService.mask(content));
+        event.setContent(content);
+        event.setSensitivityLevel(sensitivityLevel == null ? SensitivityLevel.MEDIUM : sensitivityLevel);
         event.setTraceId(TraceContext.getTraceId());
         event.setStatus(QueueStatus.PENDING);
         queueRepository.save(event);
@@ -54,9 +61,10 @@ public class MessageQueueService {
             message.setType(event.getType());
             message.setTitle(event.getTitle());
             message.setContent(event.getContent());
+            message.setSensitivityLevel(event.getSensitivityLevel());
             message.setTraceId(event.getTraceId());
             message.setRead(false);
-            message.setMasked(false);
+            message.setMasked(event.getSensitivityLevel() != SensitivityLevel.LOW);
             messageRepository.save(message);
 
             event.setStatus(QueueStatus.PROCESSED);
