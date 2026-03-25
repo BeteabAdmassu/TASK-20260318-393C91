@@ -1,0 +1,49 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:mindflow}
+    username: ${DB_USER:mindflow}
+    password: ${DB_PASSWORD:mindflow}
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
+    properties:
+      hibernate:
+        format_sql: true
+  sql:
+    init:
+      mode: always
+  jackson:
+    serialization:
+      write-dates-as-timestamps: false
+
+server:
+  port: ${SERVER_PORT:8080}
+  error:
+    include-stacktrace: never
+    include-message: never
+
+app:
+  jwt:
+    secret: ${JWT_SECRET:}
+    expiration-seconds: ${JWT_EXPIRATION_SECONDS:3600}
+  bootstrap:
+    admin:
+      enabled: ${BOOTSTRAP_ADMIN_ENABLED:false}
+      username: ${BOOTSTRAP_ADMIN_USERNAME:admin}
+      password: ${BOOTSTRAP_ADMIN_PASSWORD:}
+  message:
+    scheduler-ms: ${MESSAGE_SCHEDULER_MS:60000}
+    queue-process-ms: ${MESSAGE_QUEUE_PROCESS_MS:10000}
+  monitoring:
+    queue-backlog-threshold: ${MONITORING_QUEUE_BACKLOG_THRESHOLD:100}
+    api-p95-threshold-ms: ${MONITORING_API_P95_THRESHOLD_MS:500}
+
+management:
+  endpoint:
+    health:
+      show-details: always
+  endpoints:
+    web:
+      exposure:
+        include: health,info,metrics,prometheus
