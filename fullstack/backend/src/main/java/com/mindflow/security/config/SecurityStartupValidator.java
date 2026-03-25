@@ -14,6 +14,8 @@ import java.util.Base64;
 public class SecurityStartupValidator {
 
     private static final Logger log = LoggerFactory.getLogger(SecurityStartupValidator.class);
+    private static final String SAMPLE_JWT_SECRET = "QWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkwMTIzNDU2Nzg5MA==";
+    private static final String SAMPLE_JWT_SECRET_PLACEHOLDER = "REPLACE_WITH_BASE64_32B_SECRET";
 
     private final JwtProperties jwtProperties;
     private final AdminBootstrapProperties adminBootstrapProperties;
@@ -39,6 +41,9 @@ public class SecurityStartupValidator {
         if (secret == null || secret.isBlank()) {
             throw new IllegalStateException("JWT_SECRET is required and must not be blank");
         }
+        if (SAMPLE_JWT_SECRET.equals(secret) || SAMPLE_JWT_SECRET_PLACEHOLDER.equals(secret)) {
+            throw new IllegalStateException("JWT_SECRET cannot use sample/placeholder value. Generate a unique secret for this environment.");
+        }
         try {
             byte[] decoded = Base64.getDecoder().decode(secret);
             if (decoded.length < 32) {
@@ -57,7 +62,7 @@ public class SecurityStartupValidator {
         if (password == null || password.length() < 8) {
             throw new IllegalStateException("BOOTSTRAP_ADMIN_PASSWORD must be at least 8 characters when bootstrap is enabled");
         }
-        if ("admin1234".equals(password) || "changeMeNow123!".equals(password)) {
+        if ("admin1234".equals(password) || "changeMeNow123!".equals(password) || "__CHANGE_ME_STRONG_PASSWORD__".equals(password)) {
             throw new IllegalStateException("BOOTSTRAP_ADMIN_PASSWORD cannot use insecure sample/default value");
         }
     }

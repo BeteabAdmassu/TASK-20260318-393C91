@@ -44,6 +44,10 @@ import { DictionaryItem, RuleWeights, TemplateConfig } from './auth.models';
                 <mat-label>Popularity Weight</mat-label>
                 <input matInput type="number" formControlName="popularityWeight" />
               </mat-form-field>
+              <mat-form-field appearance="outline">
+                <mat-label>Ranking Mode</mat-label>
+                <input matInput formControlName="rankingMode" placeholder="BLENDED or STRICT_FREQUENCY_POPULARITY" />
+              </mat-form-field>
               <button mat-raised-button color="primary" type="submit">Save Weights</button>
             </form>
           </mat-card-content>
@@ -120,7 +124,8 @@ export class AdminControlComponent implements OnInit {
   readonly weightsForm = this.fb.nonNullable.group({
     relevanceWeight: [1000000, [Validators.required, Validators.min(1)]],
     frequencyWeight: [1000, [Validators.required, Validators.min(1)]],
-    popularityWeight: [1, [Validators.required, Validators.min(1)]]
+    popularityWeight: [1, [Validators.required, Validators.min(1)]],
+    rankingMode: ['BLENDED' as const, [Validators.required]]
   });
 
   readonly templateForm = this.fb.nonNullable.group({

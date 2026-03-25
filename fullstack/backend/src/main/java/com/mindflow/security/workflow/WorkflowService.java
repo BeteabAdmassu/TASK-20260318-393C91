@@ -58,7 +58,7 @@ public class WorkflowService {
         for (WorkflowTaskEntity task : repository.findByAssignedToOrderByCreatedAtDesc(actor)) {
             merged.put(task.getId(), toResponse(task));
         }
-        for (WorkflowTaskEntity task : repository.findByCollaboratorsContainingOrderByCreatedAtDesc(actor)) {
+        for (WorkflowTaskEntity task : repository.findByCollaboratorsContainsOrderByCreatedAtDesc(actor)) {
             if (canAccess(task, actor)) {
                 merged.put(task.getId(), toResponse(task));
             }

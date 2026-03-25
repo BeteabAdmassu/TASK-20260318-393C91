@@ -10,5 +10,5 @@ public interface BookingEventRepository extends JpaRepository<BookingEventEntity
 
     List<BookingEventEntity> findByArrivalReminderSentFalseAndStartTimeBefore(Instant time);
 
-    List<BookingEventEntity> findByMissedCheckInSentFalseAndStartTimeBefore(Instant time);
+    List<BookingEventEntity> findByMissedCheckInSentFalseAndStartTimeLessThanEqual(Instant time);
 }

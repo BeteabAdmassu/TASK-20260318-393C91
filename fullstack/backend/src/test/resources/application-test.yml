@@ -13,7 +13,7 @@ spring:
 
 app:
   jwt:
-    secret: QWJjZGVmZ2hpamtsbW5vcHFyc3R1dnd4eXoxMjM0NTY3ODkwMTIzNDU2Nzg5MA==
+    secret: VGVzdF9FbnZfSldUX1NlY3JldF9CYXNlNjRfMzJfQnl0ZXNfVmFsaWRfMTIzNDU2Nzg=
   bootstrap:
     admin:
       enabled: false

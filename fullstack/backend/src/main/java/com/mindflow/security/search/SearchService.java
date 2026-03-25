@@ -23,6 +23,7 @@ public class SearchService {
     private static final String KEY_RELEVANCE = "search.weight.relevance";
     private static final String KEY_FREQUENCY = "search.weight.frequency";
     private static final String KEY_POPULARITY = "search.weight.popularity";
+    private static final String KEY_RANKING_MODE = "search.ranking.mode";
 
     private final SystemConfigRepository systemConfigRepository;
     private final TransitStopRepository transitStopRepository;
@@ -147,6 +148,13 @@ public class SearchService {
         int relevanceWeight = getWeight(KEY_RELEVANCE, 1_000_000);
         int frequencyWeight = getWeight(KEY_FREQUENCY, 1_000);
         int popularityWeight = getWeight(KEY_POPULARITY, 1);
+        String mode = systemConfigRepository.findByConfigKey(KEY_RANKING_MODE)
+                .map(config -> normalize(config.getConfigValue()).toUpperCase(Locale.ROOT))
+                .orElse("BLENDED");
+
+        if ("STRICT_FREQUENCY_POPULARITY".equals(mode)) {
+            return (long) frequencyPriority * frequencyWeight + (long) stopPopularity * popularityWeight;
+        }
         return (long) relevance * relevanceWeight
                 + (long) frequencyPriority * frequencyWeight
                 + (long) stopPopularity * popularityWeight;

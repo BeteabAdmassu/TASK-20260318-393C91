@@ -11,6 +11,7 @@ import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.Instant;
 import java.time.LocalTime;
 import java.time.ZoneId;
@@ -24,17 +25,20 @@ public class MessageSchedulerService {
     private final MessageQueueService queueService;
     private final NotificationRuleService notificationRuleService;
     private final AdminControlService adminControlService;
+    private final Clock clock;
 
     public MessageSchedulerService(BookingEventRepository bookingRepository,
                                    UserRepository userRepository,
                                    MessageQueueService queueService,
                                    NotificationRuleService notificationRuleService,
-                                   AdminControlService adminControlService) {
+                                   AdminControlService adminControlService,
+                                   Clock clock) {
         this.bookingRepository = bookingRepository;
         this.userRepository = userRepository;
         this.queueService = queueService;
         this.notificationRuleService = notificationRuleService;
         this.adminControlService = adminControlService;
+        this.clock = clock;
     }
 
     @Scheduled(fixedDelayString = "${app.message.scheduler-ms:60000}")
@@ -61,7 +65,7 @@ public class MessageSchedulerService {
     @Scheduled(fixedDelayString = "${app.message.scheduler-ms:60000}")
     @Transactional
     public void generateArrivalReminders() {
-        Instant now = Instant.now();
+        Instant now = Instant.now(clock);
         for (BookingEventEntity booking : bookingRepository.findByArrivalReminderSentFalseAndStartTimeBefore(now.plusSeconds(3600))) {
             Optional<UserEntity> userOpt = userRepository.findByUsername(booking.getUsername());
             if (userOpt.isEmpty()) {
@@ -72,7 +76,7 @@ public class MessageSchedulerService {
             if (now.isBefore(trigger)) {
                 continue;
             }
-            LocalTime currentLocal = LocalTime.ofInstant(now, ZoneId.systemDefault());
+            LocalTime currentLocal = LocalTime.ofInstant(now, clock.getZone());
             boolean allowed = notificationRuleService.isNotificationAllowed(user, NotificationType.ARRIVAL_REMINDER, currentLocal);
             if (allowed) {
                 TemplateResponse template = adminControlService.resolveTemplate(
@@ -96,8 +100,8 @@ public class MessageSchedulerService {
     @Scheduled(fixedDelayString = "${app.message.scheduler-ms:60000}")
     @Transactional
     public void generateMissedCheckIns() {
-        Instant now = Instant.now().minusSeconds(300);
-        for (BookingEventEntity booking : bookingRepository.findByMissedCheckInSentFalseAndStartTimeBefore(now)) {
+        Instant now = Instant.now(clock).minusSeconds(300);
+        for (BookingEventEntity booking : bookingRepository.findByMissedCheckInSentFalseAndStartTimeLessThanEqual(now)) {
             TemplateResponse template = adminControlService.resolveTemplate(
                     "missed.checkin",
                     "Missed Check-In",

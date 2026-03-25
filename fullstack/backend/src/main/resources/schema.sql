@@ -22,7 +22,6 @@ CREATE TABLE IF NOT EXISTS workflow_tasks (
     payload VARCHAR(3000) NOT NULL,
     submitted_by VARCHAR(120) NOT NULL,
     assigned_to VARCHAR(120) NOT NULL,
-    collaborators VARCHAR(1000) NOT NULL DEFAULT '',
     current_step INTEGER NOT NULL,
     total_steps INTEGER NOT NULL,
     required_approvals INTEGER NOT NULL,
@@ -31,6 +30,13 @@ CREATE TABLE IF NOT EXISTS workflow_tasks (
     last_action_at TIMESTAMP WITH TIME ZONE NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS workflow_task_collaborators (
+    task_id BIGINT NOT NULL,
+    collaborator VARCHAR(120) NOT NULL,
+    PRIMARY KEY (task_id, collaborator),
+    CONSTRAINT fk_workflow_collaborators_task FOREIGN KEY (task_id) REFERENCES workflow_tasks (id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS messages (
@@ -174,6 +180,10 @@ ON CONFLICT (config_key) DO NOTHING;
 
 INSERT INTO system_configs (config_key, config_value)
 VALUES ('search.weight.popularity', '1')
+ON CONFLICT (config_key) DO NOTHING;
+
+INSERT INTO system_configs (config_key, config_value)
+VALUES ('search.ranking.mode', 'BLENDED')
 ON CONFLICT (config_key) DO NOTHING;
 
 INSERT INTO system_configs (config_key, config_value)

@@ -1,12 +1,15 @@
 package com.mindflow.security.workflow;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
+import jakarta.persistence.JoinColumn;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -47,8 +50,10 @@ public class WorkflowTaskEntity {
     @Column(name = "assigned_to", nullable = false, length = 120)
     private String assignedTo;
 
-    @Column(name = "collaborators", nullable = false, length = 1000)
-    private String collaborators = "";
+    @ElementCollection
+    @CollectionTable(name = "workflow_task_collaborators", joinColumns = @JoinColumn(name = "task_id"))
+    @Column(name = "collaborator", nullable = false, length = 120)
+    private Set<String> collaborators;
 
     @Column(name = "current_step", nullable = false)
     private int currentStep;
@@ -151,29 +156,20 @@ public class WorkflowTaskEntity {
         this.assignedTo = assignedTo;
     }
 
-    public String getCollaborators() {
+    public Set<String> getCollaborators() {
         return collaborators;
     }
 
-    public void setCollaborators(String collaborators) {
+    public void setCollaborators(Set<String> collaborators) {
         this.collaborators = collaborators;
     }
 
     public Set<String> collaboratorsAsSet() {
-        Set<String> set = new HashSet<>();
-        if (collaborators == null || collaborators.isBlank()) {
-            return set;
-        }
-        for (String part : collaborators.split(",")) {
-            if (!part.isBlank()) {
-                set.add(part.trim());
-            }
-        }
-        return set;
+        return collaborators == null ? new HashSet<>() : new HashSet<>(collaborators);
     }
 
     public void setCollaboratorsFromSet(Set<String> values) {
-        this.collaborators = String.join(",", values);
+        this.collaborators = values == null ? new HashSet<>() : new HashSet<>(values);
     }
 
     public int getCurrentStep() {

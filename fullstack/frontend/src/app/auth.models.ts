@@ -110,6 +110,7 @@ export interface RuleWeights {
   relevanceWeight: number;
   frequencyWeight: number;
   popularityWeight: number;
+  rankingMode: 'BLENDED' | 'STRICT_FREQUENCY_POPULARITY';
 }
 
 export interface TemplateConfig {

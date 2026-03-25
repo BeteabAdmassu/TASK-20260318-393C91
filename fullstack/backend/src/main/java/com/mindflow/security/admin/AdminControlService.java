@@ -15,6 +15,7 @@ public class AdminControlService {
     private static final String KEY_RELEVANCE = "search.weight.relevance";
     private static final String KEY_FREQUENCY = "search.weight.frequency";
     private static final String KEY_POPULARITY = "search.weight.popularity";
+    private static final String KEY_RANKING_MODE = "search.ranking.mode";
     private static final String KEY_CLEAN_AREA_UNIT = "cleaning.rule.area.unit";
     private static final String KEY_CLEAN_PRICE_UNIT = "cleaning.rule.price.unit";
     private static final String KEY_CLEAN_MISSING_MARKER = "cleaning.rule.missing.marker";
@@ -37,7 +38,8 @@ public class AdminControlService {
         int relevance = getInt(KEY_RELEVANCE, 1_000_000);
         int frequency = getInt(KEY_FREQUENCY, 1_000);
         int popularity = getInt(KEY_POPULARITY, 1);
-        return new RuleWeightsResponse(relevance, frequency, popularity);
+        String rankingMode = getString(KEY_RANKING_MODE, "BLENDED");
+        return new RuleWeightsResponse(relevance, frequency, popularity, rankingMode);
     }
 
     @Transactional
@@ -45,6 +47,8 @@ public class AdminControlService {
         upsert(KEY_RELEVANCE, request.relevanceWeight().toString());
         upsert(KEY_FREQUENCY, request.frequencyWeight().toString());
         upsert(KEY_POPULARITY, request.popularityWeight().toString());
+        String mode = request.rankingMode() == null || request.rankingMode().isBlank() ? "BLENDED" : request.rankingMode();
+        upsert(KEY_RANKING_MODE, mode);
         return getRuleWeights();
     }
 

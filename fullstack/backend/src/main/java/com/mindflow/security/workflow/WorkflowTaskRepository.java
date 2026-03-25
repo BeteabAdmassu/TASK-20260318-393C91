@@ -10,7 +10,7 @@ public interface WorkflowTaskRepository extends JpaRepository<WorkflowTaskEntity
 
     List<WorkflowTaskEntity> findByAssignedToOrderByCreatedAtDesc(String assignedTo);
 
-    List<WorkflowTaskEntity> findByCollaboratorsContainingOrderByCreatedAtDesc(String collaboratorToken);
+    List<WorkflowTaskEntity> findByCollaboratorsContainsOrderByCreatedAtDesc(String collaborator);
 
     List<WorkflowTaskEntity> findByStatusInAndLastActionAtBefore(List<WorkflowStatus> statuses, Instant cutoff);
 }

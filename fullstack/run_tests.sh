@@ -5,6 +5,61 @@ ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 UNIT_SCRIPT="${ROOT_DIR}/unit_tests/run_unit_tests.sh"
 API_SCRIPT="${ROOT_DIR}/API_tests/run_api_tests.sh"
 
+hydrate_env_for_tests() {
+  local env_file="$1"
+  local jwt_placeholder="REPLACE_WITH_BASE64_32B_SECRET"
+  local pwd_placeholder="__CHANGE_ME_STRONG_PASSWORD__"
+
+  if command -v python3 >/dev/null 2>&1; then
+    python3 - <<'PY' "$env_file" "$jwt_placeholder" "$pwd_placeholder"
+import base64, os, secrets, sys
+
+path = sys.argv[1]
+jwt_placeholder = sys.argv[2]
+pwd_placeholder = sys.argv[3]
+
+with open(path, "r", encoding="utf-8") as f:
+    lines = f.read().splitlines()
+
+changed = False
+updated = []
+for line in lines:
+    if line.startswith("JWT_SECRET="):
+        val = line.split("=", 1)[1].strip()
+        if not val or val == jwt_placeholder:
+            val = base64.b64encode(secrets.token_bytes(48)).decode("ascii")
+            line = f"JWT_SECRET={val}"
+            changed = True
+    elif line.startswith("BOOTSTRAP_ADMIN_PASSWORD="):
+        val = line.split("=", 1)[1].strip()
+        if not val or val == pwd_placeholder:
+            val = "RunTestsAdmin!2026"
+            line = f"BOOTSTRAP_ADMIN_PASSWORD={val}"
+            changed = True
+    updated.append(line)
+
+if changed:
+    with open(path, "w", encoding="utf-8") as f:
+        f.write("\n".join(updated) + "\n")
+    print("[WARN] Hydrated placeholder secrets in .env for local test run")
+PY
+  fi
+}
+
+if [ ! -f "${ROOT_DIR}/.env" ]; then
+  if [ -f "${ROOT_DIR}/.env.example" ]; then
+    cp "${ROOT_DIR}/.env.example" "${ROOT_DIR}/.env"
+    echo "[WARN] .env missing; copied .env.example to .env for test run reproducibility"
+    hydrate_env_for_tests "${ROOT_DIR}/.env"
+  else
+    echo "[ERROR] Missing ${ROOT_DIR}/.env and ${ROOT_DIR}/.env.example"
+    echo "Create env file first, e.g.: cp .env.example .env"
+    exit 1
+  fi
+else
+  hydrate_env_for_tests "${ROOT_DIR}/.env"
+fi
+
 if [ -f "${ROOT_DIR}/.env" ]; then
   set -a
   source "${ROOT_DIR}/.env"

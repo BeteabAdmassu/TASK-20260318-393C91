@@ -8,6 +8,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import java.time.Instant;
 import java.util.List;
+import java.util.Set;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -60,7 +61,7 @@ class WorkflowEscalationTest {
         task.setPayload("{}");
         task.setSubmittedBy("dispatcher_a");
         task.setAssignedTo("dispatcher_a");
-        task.setCollaborators("dispatcher_a");
+        task.setCollaborators(Set.of("dispatcher_a"));
         task.setCurrentStep(1);
         task.setTotalSteps(3);
         task.setRequiredApprovals(1);

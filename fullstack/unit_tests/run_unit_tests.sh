@@ -12,6 +12,7 @@ TEST_CLASSES=(
   "MessagePrivacyServiceTest"
   "MessageCenterAuthorizationTest"
   "MessageTemplateRuntimeTest"
+  "MessageSchedulerBoundaryTest"
   "SearchServiceTest"
   "NotificationRuleServiceTest"
   "NotificationSettingsControllerTest"
