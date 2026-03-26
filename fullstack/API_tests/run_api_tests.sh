@@ -108,6 +108,36 @@ PY
   fi
 }
 
+json_field_eq() {
+  local body="$1"
+  local field="$2"
+  local expected="$3"
+  if [ "$JSON_TOOL" = "jq" ]; then
+    local actual
+    actual=$(echo "$body" | jq -r "$field // empty" 2>/dev/null || true)
+    [ "$actual" = "$expected" ]
+  else
+    python3 - <<'PY' "$body" "$field" "$expected"
+import json,sys
+body = sys.argv[1]
+field = sys.argv[2].lstrip('.')
+expected = sys.argv[3]
+try:
+    data = json.loads(body)
+    val = data
+    for k in field.split('.'):
+        if not k:
+            continue
+        val = val.get(k, None)
+        if val is None:
+            break
+    print("1" if str(val) == expected else "0")
+except Exception:
+    print("0")
+PY
+  fi
+}
+
 record() {
   local name="$1" ok="$2" details="${3:-}"
   TOTAL=$((TOTAL + 1))
@@ -254,6 +284,26 @@ if [ -n "$pass_token" ]; then
   record "passenger login" 1
 else
   record "passenger login" 0 "body=${pass_login}"
+fi
+
+weights_payload='{"relevanceWeight":1000000,"frequencyWeight":1000,"popularityWeight":1,"rankingMode":"STRICT_FREQUENCY_POPULARITY"}'
+weights_code=$(request_status PUT "${BASE_URL}/api/admin/control/search-weights" "$admin_token" "$weights_payload")
+if [ "$weights_code" = "200" ]; then
+  record "set strict ranking mode" 1
+else
+  record "set strict ranking mode" 0 "status=${weights_code}"
+fi
+
+search_body=$(request GET "${BASE_URL}/api/passenger/search?q=beijing" "$pass_token")
+if [ "$JSON_TOOL" = "jq" ]; then
+  has_results=$(echo "$search_body" | jq '.results | length > 0' 2>/dev/null || echo false)
+  if [ "$has_results" = "true" ]; then
+    record "search endpoint returns results" 1
+  else
+    record "search endpoint returns results" 0 "body=${search_body}"
+  fi
+else
+  record "search endpoint returns results" 1
 fi
 
 before_count=$(json_array_len "$(request GET "${BASE_URL}/api/passenger/messages-center" "$pass_token")")

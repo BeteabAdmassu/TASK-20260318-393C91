@@ -24,19 +24,22 @@ public class CleanedRecordEntity {
     @Column(name = "source_ref", nullable = false, length = 255)
     private String sourceRef;
 
-    @Column(name = "stop_name", nullable = false, length = 200)
+    @Column(name = "stop_name", length = 200)
     private String stopName;
 
-    @Column(name = "address", nullable = false, length = 255)
+    @Column(name = "address", length = 255)
     private String address;
 
-    @Column(name = "apartment_type", nullable = false, length = 120)
+    @Column(name = "residential_area", length = 200)
+    private String residentialArea;
+
+    @Column(name = "apartment_type", length = 120)
     private String apartmentType;
 
-    @Column(name = "area_standardized", nullable = false, length = 120)
+    @Column(name = "area_standardized", length = 120)
     private String areaStandardized;
 
-    @Column(name = "price_standardized", nullable = false, length = 120)
+    @Column(name = "price_standardized", length = 120)
     private String priceStandardized;
 
     @Column(name = "raw_snapshot", nullable = false, length = 4000)
@@ -96,6 +99,14 @@ public class CleanedRecordEntity {
 
     public void setApartmentType(String apartmentType) {
         this.apartmentType = apartmentType;
+    }
+
+    public String getResidentialArea() {
+        return residentialArea;
+    }
+
+    public void setResidentialArea(String residentialArea) {
+        this.residentialArea = residentialArea;
     }
 
     public String getAreaStandardized() {

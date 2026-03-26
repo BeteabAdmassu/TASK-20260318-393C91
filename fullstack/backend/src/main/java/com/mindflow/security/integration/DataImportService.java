@@ -139,13 +139,19 @@ public class DataImportService {
             if (cols.size() < 5) {
                 continue;
             }
-            Map<String, String> fields = Map.of(
-                    "stop", cols.get(0).text(),
-                    "address", cols.get(1).text(),
-                    "apartment", cols.get(2).text(),
-                    "area", cols.get(3).text(),
-                    "price", cols.get(4).text()
-            );
+            Map<String, String> fields = new HashMap<>();
+            fields.put("stop", cols.get(0).text());
+            fields.put("address", cols.get(1).text());
+            if (cols.size() >= 6) {
+                fields.put("residential_area", cols.get(2).text());
+                fields.put("apartment", cols.get(3).text());
+                fields.put("area", cols.get(4).text());
+                fields.put("price", cols.get(5).text());
+            } else {
+                fields.put("apartment", cols.get(2).text());
+                fields.put("area", cols.get(3).text());
+                fields.put("price", cols.get(4).text());
+            }
             parsed.add(new RawImportRecord("html-row-" + i, fields, row.outerHtml()));
             i++;
         }
@@ -157,12 +163,14 @@ public class DataImportService {
 
         String stop = mapped(map, "stop", "stopName", "station_name");
         String address = mapped(map, "address", "addr", "location");
+        String residentialArea = mapped(map, "residentialArea", "residential_area", "community", "residence");
         String apartment = mapped(map, "apartment", "aptType", "house_type");
         String area = mapped(map, "area", "area_size", "size");
         String price = mapped(map, "price", "rent", "monthly_price");
 
         String cleanStop = normalizeOrNull("stop_name", stop, raw.sourceRef(), jobId, notes);
         String cleanAddress = normalizeOrNull("address", applyDictionary("address", address), raw.sourceRef(), jobId, notes);
+        String cleanResidentialArea = normalizeOrNull("residential_area", applyDictionary("residential_area", residentialArea), raw.sourceRef(), jobId, notes);
         String cleanApartment = normalizeOrNull("apartment_type", applyDictionary("apartment_type", apartment), raw.sourceRef(), jobId, notes);
         String cleanArea = normalizeArea(area, raw.sourceRef(), jobId, notes);
         String cleanPrice = normalizePrice(price, raw.sourceRef(), jobId, notes);
@@ -172,6 +180,7 @@ public class DataImportService {
         entity.setSourceRef(raw.sourceRef());
         entity.setStopName(cleanStop);
         entity.setAddress(cleanAddress);
+        entity.setResidentialArea(cleanResidentialArea);
         entity.setApartmentType(cleanApartment);
         entity.setAreaStandardized(cleanArea);
         entity.setPriceStandardized(cleanPrice);
@@ -179,15 +188,16 @@ public class DataImportService {
         cleanedRecordRepository.save(entity);
 
         versionFieldIfChanged(cleanStop, "address", cleanAddress, jobId);
+        versionFieldIfChanged(cleanStop, "residential_area", cleanResidentialArea, jobId);
         versionFieldIfChanged(cleanStop, "apartment_type", cleanApartment, jobId);
         versionFieldIfChanged(cleanStop, "area_standardized", cleanArea, jobId);
         versionFieldIfChanged(cleanStop, "price_standardized", cleanPrice, jobId);
 
-        upsertTransitStop(cleanStop, cleanAddress, cleanApartment);
+        upsertTransitStop(cleanStop, cleanAddress, cleanResidentialArea, cleanApartment);
     }
 
-    private void upsertTransitStop(String stopName, String address, String apartmentType) {
-        if (stopName == null || stopName.isBlank() || "NULL".equalsIgnoreCase(stopName)) {
+    private void upsertTransitStop(String stopName, String address, String residentialArea, String apartmentType) {
+        if (stopName == null || stopName.isBlank()) {
             return;
         }
         String normalizedStop = stopName.trim();
@@ -201,7 +211,7 @@ public class DataImportService {
         stop.setStopName(normalizedStop);
         stop.setPinyin(toAsciiWords(normalizedStop));
         stop.setInitials(toInitials(normalizedStop));
-        stop.setKeywords(buildKeywords(address, apartmentType, normalizedStop));
+        stop.setKeywords(buildKeywords(address, residentialArea, apartmentType, normalizedStop));
         if (stop.getFrequencyPriority() <= 0) {
             stop.setFrequencyPriority(50);
         }
@@ -211,12 +221,14 @@ public class DataImportService {
         transitStopRepository.save(stop);
     }
 
-    private String buildKeywords(String address, String apartmentType, String stopName) {
+    private String buildKeywords(String address, String residentialArea, String apartmentType, String stopName) {
         String mappedApartment = applyDictionary("apartment_type", apartmentType);
         String mappedAddress = applyDictionary("address", address);
+        String mappedArea = applyDictionary("residential_area", residentialArea);
         return String.join(",",
                 safeKeyword(stopName),
                 safeKeyword(mappedAddress),
+                safeKeyword(mappedArea),
                 safeKeyword(mappedApartment));
     }
 
@@ -259,10 +271,13 @@ public class DataImportService {
     }
 
     private void versionFieldIfChanged(String stopName, String fieldName, String newValue, Long jobId) {
+        if (stopName == null || stopName.isBlank()) {
+            return;
+        }
         Optional<StopStructureVersionEntity> latest = stopStructureVersionRepository
                 .findTopByStopNameAndFieldNameOrderByVersionNumberDesc(stopName, fieldName);
-        String old = latest.map(StopStructureVersionEntity::getNewValue).orElse("NULL");
-        if (old.equals(newValue)) {
+        String old = latest.map(StopStructureVersionEntity::getNewValue).orElse(null);
+        if (java.util.Objects.equals(old, newValue)) {
             return;
         }
         StopStructureVersionEntity version = new StopStructureVersionEntity();
@@ -286,12 +301,11 @@ public class DataImportService {
     }
 
     private String normalizeOrNull(String fieldName, String value, String sourceRef, Long jobId, List<String> notes) {
-        String missingMarker = adminControlService.getCleaningRules().missingValueMarker();
         boolean trimEnabled = adminControlService.getCleaningRules().trimEnabled();
         if (value == null || value.isBlank()) {
-            audit(jobId, sourceRef, fieldName, "", missingMarker, "MISSING_TO_NULL");
-            notes.add("Missing value mapped to " + missingMarker + " for " + fieldName + " from " + sourceRef);
-            return missingMarker;
+            audit(jobId, sourceRef, fieldName, "", null, "MISSING_TO_NULL");
+            notes.add("Missing value mapped to NULL for " + fieldName + " from " + sourceRef);
+            return null;
         }
         String cleaned = trimEnabled ? value.trim() : value;
         if (!cleaned.equals(value)) {
@@ -302,28 +316,26 @@ public class DataImportService {
 
     private String normalizeArea(String value, String sourceRef, Long jobId, List<String> notes) {
         String areaUnit = adminControlService.getCleaningRules().areaUnit();
-        String missingMarker = adminControlService.getCleaningRules().missingValueMarker();
         if (value == null || value.isBlank()) {
-            audit(jobId, sourceRef, "area", "", missingMarker, "MISSING_TO_NULL");
-            notes.add("Missing area mapped to " + missingMarker + " from " + sourceRef);
-            return missingMarker;
+            audit(jobId, sourceRef, "area", "", null, "MISSING_TO_NULL");
+            notes.add("Missing area mapped to NULL from " + sourceRef);
+            return null;
         }
         String numeric = extractFirstNumber(value);
-        String cleaned = numeric == null ? missingMarker : numeric + " " + areaUnit;
+        String cleaned = numeric == null ? null : numeric + " " + areaUnit;
         audit(jobId, sourceRef, "area", value, cleaned, "UNIT_STANDARDIZED");
         return cleaned;
     }
 
     private String normalizePrice(String value, String sourceRef, Long jobId, List<String> notes) {
         String priceUnit = adminControlService.getCleaningRules().priceUnit();
-        String missingMarker = adminControlService.getCleaningRules().missingValueMarker();
         if (value == null || value.isBlank()) {
-            audit(jobId, sourceRef, "price", "", missingMarker, "MISSING_TO_NULL");
-            notes.add("Missing price mapped to " + missingMarker + " from " + sourceRef);
-            return missingMarker;
+            audit(jobId, sourceRef, "price", "", null, "MISSING_TO_NULL");
+            notes.add("Missing price mapped to NULL from " + sourceRef);
+            return null;
         }
         String numeric = extractFirstNumber(value);
-        String cleaned = numeric == null ? missingMarker : numeric + " " + priceUnit;
+        String cleaned = numeric == null ? null : numeric + " " + priceUnit;
         audit(jobId, sourceRef, "price", value, cleaned, "UNIT_STANDARDIZED");
         return cleaned;
     }

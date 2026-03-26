@@ -144,7 +144,7 @@ export class AdminControlComponent implements OnInit {
   constructor(
     private readonly fb: FormBuilder,
     private readonly service: AdminControlService
-  ) {}
+  ) { }
 
   ngOnInit(): void {
     this.loadAll();

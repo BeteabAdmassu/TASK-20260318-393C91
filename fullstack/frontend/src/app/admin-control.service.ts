@@ -5,7 +5,7 @@ import { DictionaryItem, RuleWeights, TemplateConfig } from './auth.models';
 
 @Injectable({ providedIn: 'root' })
 export class AdminControlService {
-  constructor(private readonly http: HttpClient) {}
+  constructor(private readonly http: HttpClient) { }
 
   getWeights(): Observable<RuleWeights> {
     return this.http.get<RuleWeights>('/api/admin/control/search-weights');

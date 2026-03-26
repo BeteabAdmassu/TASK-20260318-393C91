@@ -13,3 +13,8 @@ target/
 mvn.cmd
 mvnw
 mvnw.cmd
+
+# Node/Angular
+node_modules/
+dist/
+.angular/

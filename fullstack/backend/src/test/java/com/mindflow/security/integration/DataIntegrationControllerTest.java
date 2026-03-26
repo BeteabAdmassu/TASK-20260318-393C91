@@ -53,8 +53,8 @@ class DataIntegrationControllerTest {
 
     @Test
     void htmlImportExposesAuditAndVersionEndpoints() throws Exception {
-        String html = "<table><tr><th>stop</th><th>address</th><th>apartment</th><th>area</th><th>price</th></tr>"
-                + "<tr><td>River Park</td><td>Main Rd 9</td><td>Studio</td><td>60m2</td><td>1800 rmb</td></tr>"
+        String html = "<table><tr><th>stop</th><th>address</th><th>residential_area</th><th>apartment</th><th>area</th><th>price</th></tr>"
+                + "<tr><td>River Park</td><td>Main Rd 9</td><td>Riverside Garden</td><td>Studio</td><td>60m2</td><td>1800 rmb</td></tr>"
                 + "</table>";
 
         String payload = objectMapper.writeValueAsString(Map.of(
@@ -83,7 +83,35 @@ class DataIntegrationControllerTest {
                         .header("Authorization", "Bearer " + adminToken)
                         .param("jobId", String.valueOf(jobId)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$[0].stopName").exists());
+                .andExpect(jsonPath("$[0].stopName").exists())
+                .andExpect(jsonPath("$[?(@.fieldName=='residential_area')].newValue").exists());
+
+        String jsonPayload = objectMapper.writeValueAsString(Map.of(
+                "format", "JSON",
+                "sourceName", "json-null-seed",
+                "payload", "[{\"stop\":\"NoPriceStop\",\"address\":\"Road 1\",\"residentialArea\":\"Green Block\",\"apartment\":\"Studio\",\"area\":\"66m2\",\"price\":\"\"}]"
+        ));
+
+        String jsonBody = mockMvc.perform(post("/api/admin/integration/import")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(jsonPayload))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+
+        long jsonJobId = objectMapper.readTree(jsonBody).path("job").path("jobId").asLong();
+
+        mockMvc.perform(get("/api/admin/integration/audit")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("jobId", String.valueOf(jsonJobId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.fieldName=='price')].action").value(org.hamcrest.Matchers.hasItem("MISSING_TO_NULL")));
+
+        mockMvc.perform(get("/api/admin/integration/versions")
+                        .header("Authorization", "Bearer " + adminToken)
+                        .param("jobId", String.valueOf(jsonJobId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[?(@.fieldName=='residential_area')].newValue").exists());
     }
 
     private void ensureUser(String username, String password, Role role) {

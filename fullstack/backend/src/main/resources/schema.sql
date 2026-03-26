@@ -93,15 +93,26 @@ CREATE TABLE IF NOT EXISTS cleaned_records (
     id BIGSERIAL PRIMARY KEY,
     import_job_id BIGINT NOT NULL,
     source_ref VARCHAR(255) NOT NULL,
-    stop_name VARCHAR(200) NOT NULL,
-    address VARCHAR(255) NOT NULL,
-    apartment_type VARCHAR(120) NOT NULL,
-    area_standardized VARCHAR(120) NOT NULL,
-    price_standardized VARCHAR(120) NOT NULL,
+    stop_name VARCHAR(200),
+    address VARCHAR(255),
+    residential_area VARCHAR(200),
+    apartment_type VARCHAR(120),
+    area_standardized VARCHAR(120),
+    price_standardized VARCHAR(120),
     raw_snapshot VARCHAR(4000) NOT NULL,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     CONSTRAINT fk_cleaned_records_job FOREIGN KEY (import_job_id) REFERENCES import_jobs (id)
 );
+
+ALTER TABLE cleaned_records
+    ADD COLUMN IF NOT EXISTS residential_area VARCHAR(200);
+
+ALTER TABLE cleaned_records
+    ALTER COLUMN stop_name DROP NOT NULL,
+    ALTER COLUMN address DROP NOT NULL,
+    ALTER COLUMN apartment_type DROP NOT NULL,
+    ALTER COLUMN area_standardized DROP NOT NULL,
+    ALTER COLUMN price_standardized DROP NOT NULL;
 
 CREATE TABLE IF NOT EXISTS cleaning_audit_logs (
     id BIGSERIAL PRIMARY KEY,
@@ -119,13 +130,17 @@ CREATE TABLE IF NOT EXISTS stop_structure_versions (
     id BIGSERIAL PRIMARY KEY,
     stop_name VARCHAR(200) NOT NULL,
     field_name VARCHAR(120) NOT NULL,
-    old_value VARCHAR(1000) NOT NULL,
-    new_value VARCHAR(1000) NOT NULL,
+    old_value VARCHAR(1000),
+    new_value VARCHAR(1000),
     version_number INTEGER NOT NULL,
     changed_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     import_job_id BIGINT NOT NULL,
     CONSTRAINT fk_stop_versions_job FOREIGN KEY (import_job_id) REFERENCES import_jobs (id)
 );
+
+ALTER TABLE stop_structure_versions
+    ALTER COLUMN old_value DROP NOT NULL,
+    ALTER COLUMN new_value DROP NOT NULL;
 
 CREATE TABLE IF NOT EXISTS transit_stops (
     id BIGSERIAL PRIMARY KEY,

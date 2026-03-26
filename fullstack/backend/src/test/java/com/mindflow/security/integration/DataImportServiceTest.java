@@ -11,6 +11,7 @@ import org.springframework.test.context.ActiveProfiles;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SpringBootTest
@@ -56,10 +57,11 @@ class DataImportServiceTest {
     void importFeedsSearchCatalogAndAppliesDictionaryMapping() {
         adminControlService.createDictionary(new DictionaryRequest("apartment_type", "Studio", "Apartment-Studio", true));
         adminControlService.createDictionary(new DictionaryRequest("address", "Road 9", "North District Road 9", true));
+        adminControlService.createDictionary(new DictionaryRequest("residential_area", "Sunrise Heights", "Sunrise Heights Community", true));
 
         String payload = """
                 [
-                  {"stop":"North Garden","address":"Road 9","apartment":"Studio","area":"66 m2","price":"1900 rmb"}
+                  {"stop":"North Garden","address":"Road 9","residentialArea":"Sunrise Heights","apartment":"Studio","area":"66 m2","price":"1900 rmb"}
                 ]
                 """;
 
@@ -69,8 +71,33 @@ class DataImportServiceTest {
         boolean existsInTransitStops = transitStopRepository.findAll().stream()
                 .anyMatch(stop -> "North Garden".equals(stop.getStopName())
                         && stop.getKeywords().contains("apartment-studio")
+                        && stop.getKeywords().contains("sunrise heights community")
                         && stop.getKeywords().contains("north district road 9"));
 
         assertTrue(existsInTransitStops);
+    }
+
+    @Test
+    void missingValuesPersistAsTrueNulls() {
+        String payload = """
+                [
+                  {"stop":"Null Field Stop","address":"","residentialArea":"","apartment":"","area":"","price":""}
+                ]
+                """;
+
+        ImportSummaryResponse summary = dataImportService.ingest(new ImportRequest(ImportFormat.JSON, "null-json", payload));
+        assertTrue(summary.job().successRows() >= 1);
+
+        CleanedRecordEntity row = cleanedRecordRepository.findAll().stream()
+                .filter(record -> "Null Field Stop".equals(record.getStopName()))
+                .findFirst()
+                .orElse(null);
+
+        assertNotNull(row);
+        assertNull(row.getAddress());
+        assertNull(row.getResidentialArea());
+        assertNull(row.getApartmentType());
+        assertNull(row.getAreaStandardized());
+        assertNull(row.getPriceStandardized());
     }
 }

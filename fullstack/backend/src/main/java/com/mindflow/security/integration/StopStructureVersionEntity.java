@@ -24,10 +24,10 @@ public class StopStructureVersionEntity {
     @Column(name = "field_name", nullable = false, length = 120)
     private String fieldName;
 
-    @Column(name = "old_value", nullable = false, length = 1000)
+    @Column(name = "old_value", length = 1000)
     private String oldValue;
 
-    @Column(name = "new_value", nullable = false, length = 1000)
+    @Column(name = "new_value", length = 1000)
     private String newValue;
 
     @Column(name = "version_number", nullable = false)

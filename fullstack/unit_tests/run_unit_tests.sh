@@ -14,6 +14,7 @@ TEST_CLASSES=(
   "MessageTemplateRuntimeTest"
   "MessageSchedulerBoundaryTest"
   "SearchServiceTest"
+  "SearchControllerIntegrationTest"
   "NotificationRuleServiceTest"
   "NotificationSettingsControllerTest"
   "RbacAccessTest"
