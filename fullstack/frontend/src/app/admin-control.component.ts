@@ -125,7 +125,7 @@ export class AdminControlComponent implements OnInit {
     relevanceWeight: [1000000, [Validators.required, Validators.min(1)]],
     frequencyWeight: [1000, [Validators.required, Validators.min(1)]],
     popularityWeight: [1, [Validators.required, Validators.min(1)]],
-    rankingMode: ['BLENDED' as const, [Validators.required]]
+    rankingMode: this.fb.nonNullable.control<'BLENDED' | 'STRICT_FREQUENCY_POPULARITY'>('BLENDED', [Validators.required])
   });
 
   readonly templateForm = this.fb.nonNullable.group({

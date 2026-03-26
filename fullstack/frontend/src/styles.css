@@ -1,3 +1,5 @@
+@import '@angular/material/prebuilt-themes/indigo-pink.css';
+
 :root {
   --bg: #f4f8fb;
   --ink: #1d2d35;
@@ -42,9 +44,14 @@ label {
   display: block;
   margin-top: 1rem;
   font-weight: 600;
+  line-height: 1.35;
 }
 
-input {
+.card form label:not(.toggle-row) input:not([type='checkbox']) {
+  margin-top: 0.55rem;
+}
+
+.card form input:not(.mat-mdc-input-element):not([type='checkbox']) {
   width: 100%;
   margin-top: 0.4rem;
   border: 1px solid #c7d6dd;
@@ -228,6 +235,29 @@ button:disabled {
 
 .mat-mdc-card {
   border-radius: 14px;
+}
+
+.mat-mdc-form-field {
+  width: 100%;
+  margin-top: 0.2rem;
+}
+
+.mat-mdc-form-field .mdc-text-field {
+  border-radius: 12px;
+  background: #fbfdff;
+}
+
+.mat-mdc-form-field.mat-focused .mdc-text-field {
+  box-shadow: 0 0 0 3px rgba(31, 110, 140, 0.12);
+}
+
+.mat-mdc-select-panel,
+.mat-mdc-autocomplete-panel {
+  border-radius: 12px !important;
+}
+
+.mat-mdc-option {
+  min-height: 42px !important;
 }
 
 .toast {
