@@ -13,7 +13,7 @@ target/
 mvn.cmd
 mvnw
 mvnw.cmd
-
+.tmp/
 # Node/Angular
 node_modules/
 dist/

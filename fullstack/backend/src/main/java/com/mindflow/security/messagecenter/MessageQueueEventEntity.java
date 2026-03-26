@@ -1,5 +1,6 @@
 package com.mindflow.security.messagecenter;
 
+import com.mindflow.security.common.TenantScoped;
 import com.mindflow.security.message.SensitivityLevel;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -15,7 +16,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "message_queue_events")
-public class MessageQueueEventEntity {
+public class MessageQueueEventEntity implements TenantScoped {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -34,6 +35,9 @@ public class MessageQueueEventEntity {
     @Column(name = "content", nullable = false, length = 4000)
     private String content;
 
+    @Column(name = "idempotency_key", nullable = false, length = 200)
+    private String idempotencyKey;
+
     @Enumerated(EnumType.STRING)
     @Column(name = "sensitivity_level", nullable = false, length = 20)
     private SensitivityLevel sensitivityLevel;
@@ -47,6 +51,9 @@ public class MessageQueueEventEntity {
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
+
+    @Column(name = "tenant_id", nullable = false, length = 64)
+    private String tenantId = "default";
 
     @PrePersist
     public void prePersist() {
@@ -93,6 +100,14 @@ public class MessageQueueEventEntity {
         this.content = content;
     }
 
+    public String getIdempotencyKey() {
+        return idempotencyKey;
+    }
+
+    public void setIdempotencyKey(String idempotencyKey) {
+        this.idempotencyKey = idempotencyKey;
+    }
+
     public SensitivityLevel getSensitivityLevel() {
         return sensitivityLevel;
     }
@@ -115,5 +130,15 @@ public class MessageQueueEventEntity {
 
     public void setStatus(QueueStatus status) {
         this.status = status;
+    }
+
+    @Override
+    public String getTenantId() {
+        return tenantId;
+    }
+
+    @Override
+    public void setTenantId(String tenantId) {
+        this.tenantId = tenantId;
     }
 }

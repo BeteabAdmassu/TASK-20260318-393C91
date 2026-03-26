@@ -53,24 +53,24 @@ public class WorkflowController {
     @PutMapping("/{id}/approve")
     @PreAuthorize("hasAnyRole('DISPATCHER', 'ADMIN')")
     public ResponseEntity<WorkflowTaskResponse> approve(@PathVariable @Positive Long id,
-                                                        @Valid @RequestBody WorkflowActionRequest request,
-                                                        Authentication authentication) {
+                                                         @Valid @RequestBody WorkflowActionRequest request,
+                                                         Authentication authentication) {
         return ResponseEntity.ok(workflowService.approve(id, authentication.getName()));
     }
 
     @PutMapping("/{id}/reject")
     @PreAuthorize("hasAnyRole('DISPATCHER', 'ADMIN')")
     public ResponseEntity<WorkflowTaskResponse> reject(@PathVariable @Positive Long id,
-                                                       @Valid @RequestBody WorkflowActionRequest request,
-                                                       Authentication authentication) {
+                                                        @Valid @RequestBody WorkflowActionRequest request,
+                                                        Authentication authentication) {
         return ResponseEntity.ok(workflowService.reject(id, authentication.getName()));
     }
 
     @PutMapping("/{id}/return")
     @PreAuthorize("hasAnyRole('DISPATCHER', 'ADMIN')")
     public ResponseEntity<WorkflowTaskResponse> returnTask(@PathVariable @Positive Long id,
-                                                           @Valid @RequestBody WorkflowActionRequest request,
-                                                           Authentication authentication) {
+                                                            @Valid @RequestBody WorkflowActionRequest request,
+                                                            Authentication authentication) {
         return ResponseEntity.ok(workflowService.returnToSubmitter(id, authentication.getName()));
     }
 

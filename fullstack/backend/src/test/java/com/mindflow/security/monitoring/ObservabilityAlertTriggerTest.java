@@ -40,6 +40,7 @@ class ObservabilityAlertTriggerTest {
             event.setType(MessageType.ARRIVAL_REMINDER);
             event.setTitle("Reminder");
             event.setContent("payload");
+            event.setIdempotencyKey("obs-idempotency-" + i);
             event.setSensitivityLevel(SensitivityLevel.MEDIUM);
             event.setTraceId("obs-trace-" + i);
             event.setStatus(QueueStatus.PENDING);

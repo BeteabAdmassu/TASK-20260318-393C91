@@ -10,19 +10,23 @@ import jakarta.persistence.Id;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.UniqueConstraint;
 
 import java.time.Instant;
 import java.time.LocalTime;
 
 @Entity
-@Table(name = "users")
+@Table(
+        name = "users",
+        uniqueConstraints = @UniqueConstraint(name = "ux_users_tenant_username", columnNames = {"tenant_id", "username"})
+)
 public class UserEntity {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "username", nullable = false, unique = true, length = 120)
+    @Column(name = "username", nullable = false, length = 120)
     private String username;
 
     @Column(name = "password_hash", nullable = false, length = 255)
@@ -55,6 +59,9 @@ public class UserEntity {
 
     @Column(name = "dnd_end")
     private LocalTime dndEnd;
+
+    @Column(name = "tenant_id", nullable = false, length = 64)
+    private String tenantId = "default";
 
     @PrePersist
     public void prePersist() {
@@ -154,5 +161,13 @@ public class UserEntity {
 
     public void setDndEnd(LocalTime dndEnd) {
         this.dndEnd = dndEnd;
+    }
+
+    public String getTenantId() {
+        return tenantId;
+    }
+
+    public void setTenantId(String tenantId) {
+        this.tenantId = tenantId;
     }
 }

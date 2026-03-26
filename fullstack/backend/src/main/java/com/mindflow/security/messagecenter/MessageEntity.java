@@ -1,5 +1,6 @@
 package com.mindflow.security.messagecenter;
 
+import com.mindflow.security.common.TenantScoped;
 import com.mindflow.security.message.SensitivityLevel;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -15,7 +16,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "messages")
-public class MessageEntity {
+public class MessageEntity implements TenantScoped {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -49,6 +50,9 @@ public class MessageEntity {
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
+
+    @Column(name = "tenant_id", nullable = false, length = 64)
+    private String tenantId = "default";
 
     @PrePersist
     public void prePersist() {
@@ -129,5 +133,15 @@ public class MessageEntity {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    @Override
+    public String getTenantId() {
+        return tenantId;
+    }
+
+    @Override
+    public void setTenantId(String tenantId) {
+        this.tenantId = tenantId;
     }
 }

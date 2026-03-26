@@ -272,6 +272,18 @@ button:disabled {
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);
 }
 
+.global-loading {
+  position: fixed;
+  inset: 0;
+  z-index: 1100;
+  display: grid;
+  place-items: center;
+  background: rgba(12, 27, 34, 0.25);
+  color: #fff;
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
 pre {
   margin-top: 1rem;
   background: #122a35;

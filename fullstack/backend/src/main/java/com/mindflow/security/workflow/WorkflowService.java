@@ -1,7 +1,10 @@
 package com.mindflow.security.workflow;
 
 import com.mindflow.security.common.OwnershipDeniedException;
+import com.mindflow.security.common.ConcurrencyConflictException;
 import com.mindflow.security.common.ResourceNotFoundException;
+import com.mindflow.security.common.TenantContext;
+import org.springframework.orm.ObjectOptimisticLockingFailureException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -28,6 +31,7 @@ public class WorkflowService {
 
     @Transactional
     public WorkflowTaskResponse createTask(CreateWorkflowTaskRequest request, String submittedBy) {
+        String tenantId = TenantContext.getTenantId();
         WorkflowTaskEntity task = new WorkflowTaskEntity();
         task.setType(request.type());
         task.setMode(request.mode());
@@ -49,16 +53,18 @@ public class WorkflowService {
         task.setReceivedApprovals(0);
         task.setEscalated(false);
         task.setLastActionAt(Instant.now());
+        task.setTenantId(tenantId);
         return toResponse(repository.save(task));
     }
 
     @Transactional(readOnly = true)
     public List<WorkflowTaskResponse> listTasks(String actor) {
+        String tenantId = TenantContext.getTenantId();
         Map<Long, WorkflowTaskResponse> merged = new LinkedHashMap<>();
-        for (WorkflowTaskEntity task : repository.findByAssignedToOrderByCreatedAtDesc(actor)) {
+        for (WorkflowTaskEntity task : repository.findByAssignedToAndTenantIdOrderByCreatedAtDesc(actor, tenantId)) {
             merged.put(task.getId(), toResponse(task));
         }
-        for (WorkflowTaskEntity task : repository.findByCollaboratorsContainsOrderByCreatedAtDesc(actor)) {
+        for (WorkflowTaskEntity task : repository.findByCollaboratorsContainsAndTenantIdOrderByCreatedAtDesc(actor, tenantId)) {
             if (canAccess(task, actor)) {
                 merged.put(task.getId(), toResponse(task));
             }
@@ -68,35 +74,41 @@ public class WorkflowService {
 
     @Transactional(readOnly = true)
     public WorkflowDetailsResponse getTask(Long id, String actor) {
-        WorkflowTaskEntity task = fetch(id, actor);
+        WorkflowTaskEntity task = fetch(id, actor, TenantContext.getTenantId());
         return new WorkflowDetailsResponse(toResponse(task), buildProgress(task));
     }
 
     @Transactional
     public WorkflowTaskResponse approve(Long id, String actor) {
-        WorkflowTaskEntity task = fetch(id, actor);
-        stateMachineService.approve(task);
-        task.setLastActionAt(Instant.now());
-        task.setEscalated(false);
-        return toResponse(repository.save(task));
+        return withOptimisticLockGuard(() -> {
+            WorkflowTaskEntity task = fetch(id, actor, TenantContext.getTenantId());
+            stateMachineService.approve(task);
+            task.setLastActionAt(Instant.now());
+            task.setEscalated(false);
+            return toResponse(repository.save(task));
+        });
     }
 
     @Transactional
     public WorkflowTaskResponse reject(Long id, String actor) {
-        WorkflowTaskEntity task = fetch(id, actor);
-        stateMachineService.reject(task);
-        task.setLastActionAt(Instant.now());
-        task.setEscalated(false);
-        return toResponse(repository.save(task));
+        return withOptimisticLockGuard(() -> {
+            WorkflowTaskEntity task = fetch(id, actor, TenantContext.getTenantId());
+            stateMachineService.reject(task);
+            task.setLastActionAt(Instant.now());
+            task.setEscalated(false);
+            return toResponse(repository.save(task));
+        });
     }
 
     @Transactional
     public WorkflowTaskResponse returnToSubmitter(Long id, String actor) {
-        WorkflowTaskEntity task = fetch(id, actor);
-        stateMachineService.returnToSubmitter(task);
-        task.setLastActionAt(Instant.now());
-        task.setEscalated(false);
-        return toResponse(repository.save(task));
+        return withOptimisticLockGuard(() -> {
+            WorkflowTaskEntity task = fetch(id, actor, TenantContext.getTenantId());
+            stateMachineService.returnToSubmitter(task);
+            task.setLastActionAt(Instant.now());
+            task.setEscalated(false);
+            return toResponse(repository.save(task));
+        });
     }
 
     @Transactional
@@ -104,12 +116,29 @@ public class WorkflowService {
         return ids.stream().map(id -> approve(id, actor)).toList();
     }
 
+    private WorkflowTaskResponse withOptimisticLockGuard(java.util.concurrent.Callable<WorkflowTaskResponse> action) {
+        try {
+            return action.call();
+        } catch (ObjectOptimisticLockingFailureException ex) {
+            throw new ConcurrencyConflictException("Workflow task was modified concurrently. Please refresh and retry.");
+        } catch (ConcurrencyConflictException ex) {
+            throw ex;
+        } catch (Exception ex) {
+            if (ex instanceof RuntimeException runtimeException) {
+                throw runtimeException;
+            }
+            throw new IllegalStateException(ex);
+        }
+    }
+
     @Transactional
     public List<WorkflowTaskResponse> evaluateEscalations() {
+        String tenantId = TenantContext.getTenantId();
         Instant cutoff = Instant.now().minus(ESCALATION_TIMEOUT);
-        List<WorkflowTaskEntity> staleTasks = repository.findByStatusInAndLastActionAtBefore(
+        List<WorkflowTaskEntity> staleTasks = repository.findByStatusInAndLastActionAtBeforeAndTenantId(
                 List.of(WorkflowStatus.SUBMITTED, WorkflowStatus.IN_REVIEW),
-                cutoff
+                cutoff,
+                tenantId
         );
 
         for (WorkflowTaskEntity task : staleTasks) {
@@ -119,9 +148,12 @@ public class WorkflowService {
         return staleTasks.stream().map(this::toResponse).toList();
     }
 
-    private WorkflowTaskEntity fetch(Long id, String actor) {
+    private WorkflowTaskEntity fetch(Long id, String actor, String tenantId) {
         WorkflowTaskEntity task = repository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Task not found"));
+        if (!tenantId.equals(task.getTenantId())) {
+            throw new OwnershipDeniedException("Workflow task access denied for this tenant");
+        }
         if (!canAccess(task, actor)) {
             throw new OwnershipDeniedException("Workflow task access denied for this user");
         }

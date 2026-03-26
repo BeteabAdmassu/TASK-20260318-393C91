@@ -9,9 +9,16 @@ CREATE TABLE IF NOT EXISTS users (
     reminder_lead_minutes INTEGER NOT NULL DEFAULT 10,
     dnd_start TIME,
     dnd_end TIME,
+    tenant_id VARCHAR(64) NOT NULL DEFAULT 'default',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(64) NOT NULL DEFAULT 'default';
+
+DROP INDEX IF EXISTS users_username_key;
+CREATE UNIQUE INDEX IF NOT EXISTS ux_users_tenant_username ON users (tenant_id, username);
 
 CREATE TABLE IF NOT EXISTS workflow_tasks (
     id BIGSERIAL PRIMARY KEY,
@@ -27,10 +34,18 @@ CREATE TABLE IF NOT EXISTS workflow_tasks (
     required_approvals INTEGER NOT NULL,
     received_approvals INTEGER NOT NULL,
     escalated BOOLEAN NOT NULL DEFAULT FALSE,
+    tenant_id VARCHAR(64) NOT NULL DEFAULT 'default',
     last_action_at TIMESTAMP WITH TIME ZONE NOT NULL,
+    entity_version BIGINT NOT NULL DEFAULT 0,
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
     updated_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE workflow_tasks
+    ADD COLUMN IF NOT EXISTS entity_version BIGINT NOT NULL DEFAULT 0;
+
+ALTER TABLE workflow_tasks
+    ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(64) NOT NULL DEFAULT 'default';
 
 CREATE TABLE IF NOT EXISTS workflow_task_collaborators (
     task_id BIGINT NOT NULL,
@@ -49,8 +64,12 @@ CREATE TABLE IF NOT EXISTS messages (
     trace_id VARCHAR(80) NOT NULL,
     read_flag BOOLEAN NOT NULL DEFAULT FALSE,
     masked BOOLEAN NOT NULL DEFAULT FALSE,
+    tenant_id VARCHAR(64) NOT NULL DEFAULT 'default',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE messages
+    ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(64) NOT NULL DEFAULT 'default';
 
 CREATE TABLE IF NOT EXISTS message_queue_events (
     id BIGSERIAL PRIMARY KEY,
@@ -58,11 +77,29 @@ CREATE TABLE IF NOT EXISTS message_queue_events (
     type VARCHAR(40) NOT NULL CHECK (type IN ('RESERVATION_SUCCESS', 'ARRIVAL_REMINDER', 'MISSED_CHECK_IN')),
     title VARCHAR(160) NOT NULL,
     content VARCHAR(4000) NOT NULL,
+    idempotency_key VARCHAR(200) NOT NULL,
     sensitivity_level VARCHAR(20) NOT NULL DEFAULT 'MEDIUM' CHECK (sensitivity_level IN ('LOW', 'MEDIUM', 'HIGH')),
     trace_id VARCHAR(80) NOT NULL,
+    tenant_id VARCHAR(64) NOT NULL DEFAULT 'default',
     status VARCHAR(20) NOT NULL CHECK (status IN ('PENDING', 'PROCESSED')),
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE message_queue_events
+    ADD COLUMN IF NOT EXISTS idempotency_key VARCHAR(200);
+
+ALTER TABLE message_queue_events
+    ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(64) NOT NULL DEFAULT 'default';
+
+UPDATE message_queue_events
+SET idempotency_key = CONCAT('legacy-', id)
+WHERE idempotency_key IS NULL;
+
+ALTER TABLE message_queue_events
+    ALTER COLUMN idempotency_key SET NOT NULL;
+
+DROP INDEX IF EXISTS ux_message_queue_idempotency_key;
+CREATE UNIQUE INDEX IF NOT EXISTS ux_message_queue_idempotency_key ON message_queue_events (tenant_id, idempotency_key);
 
 CREATE TABLE IF NOT EXISTS booking_events (
     id BIGSERIAL PRIMARY KEY,
@@ -74,8 +111,12 @@ CREATE TABLE IF NOT EXISTS booking_events (
     reservation_success_sent BOOLEAN NOT NULL DEFAULT FALSE,
     arrival_reminder_sent BOOLEAN NOT NULL DEFAULT FALSE,
     missed_check_in_sent BOOLEAN NOT NULL DEFAULT FALSE,
+    tenant_id VARCHAR(64) NOT NULL DEFAULT 'default',
     created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW()
 );
+
+ALTER TABLE booking_events
+    ADD COLUMN IF NOT EXISTS tenant_id VARCHAR(64) NOT NULL DEFAULT 'default';
 
 CREATE TABLE IF NOT EXISTS import_jobs (
     id BIGSERIAL PRIMARY KEY,

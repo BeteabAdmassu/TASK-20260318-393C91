@@ -1,5 +1,6 @@
 package com.mindflow.security.messagecenter;
 
+import com.mindflow.security.common.TenantScoped;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
@@ -12,7 +13,7 @@ import java.time.Instant;
 
 @Entity
 @Table(name = "booking_events")
-public class BookingEventEntity {
+public class BookingEventEntity implements TenantScoped {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -44,6 +45,9 @@ public class BookingEventEntity {
 
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
+
+    @Column(name = "tenant_id", nullable = false, length = 64)
+    private String tenantId = "default";
 
     @PrePersist
     public void prePersist() {
@@ -120,5 +124,15 @@ public class BookingEventEntity {
 
     public void setMissedCheckInSent(boolean missedCheckInSent) {
         this.missedCheckInSent = missedCheckInSent;
+    }
+
+    @Override
+    public String getTenantId() {
+        return tenantId;
+    }
+
+    @Override
+    public void setTenantId(String tenantId) {
+        this.tenantId = tenantId;
     }
 }

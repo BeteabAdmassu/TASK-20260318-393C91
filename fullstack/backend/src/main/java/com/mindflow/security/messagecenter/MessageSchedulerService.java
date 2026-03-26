@@ -2,6 +2,7 @@ package com.mindflow.security.messagecenter;
 
 import com.mindflow.security.admin.TemplateResponse;
 import com.mindflow.security.admin.AdminControlService;
+import com.mindflow.security.common.TenantContext;
 import com.mindflow.security.message.SensitivityLevel;
 import com.mindflow.security.notification.NotificationRuleService;
 import com.mindflow.security.notification.NotificationType;
@@ -44,7 +45,8 @@ public class MessageSchedulerService {
     @Scheduled(fixedDelayString = "${app.message.scheduler-ms:60000}")
     @Transactional
     public void generateReservationSuccessMessages() {
-        for (BookingEventEntity booking : bookingRepository.findByReservationSuccessSentFalse()) {
+        String tenantId = TenantContext.getTenantId();
+        for (BookingEventEntity booking : bookingRepository.findByReservationSuccessSentFalseAndTenantId(tenantId)) {
             TemplateResponse template = adminControlService.resolveTemplate(
                     "reservation.success",
                     "Reservation Confirmed",
@@ -65,9 +67,10 @@ public class MessageSchedulerService {
     @Scheduled(fixedDelayString = "${app.message.scheduler-ms:60000}")
     @Transactional
     public void generateArrivalReminders() {
+        String tenantId = TenantContext.getTenantId();
         Instant now = Instant.now(clock);
-        for (BookingEventEntity booking : bookingRepository.findByArrivalReminderSentFalseAndStartTimeBefore(now.plusSeconds(3600))) {
-            Optional<UserEntity> userOpt = userRepository.findByUsername(booking.getUsername());
+        for (BookingEventEntity booking : bookingRepository.findByArrivalReminderSentFalseAndStartTimeBeforeAndTenantId(now.plusSeconds(3600), tenantId)) {
+            Optional<UserEntity> userOpt = userRepository.findByUsernameAndTenantId(booking.getUsername(), tenantId);
             if (userOpt.isEmpty()) {
                 continue;
             }
@@ -100,8 +103,9 @@ public class MessageSchedulerService {
     @Scheduled(fixedDelayString = "${app.message.scheduler-ms:60000}")
     @Transactional
     public void generateMissedCheckIns() {
+        String tenantId = TenantContext.getTenantId();
         Instant now = Instant.now(clock).minusSeconds(300);
-        for (BookingEventEntity booking : bookingRepository.findByMissedCheckInSentFalseAndStartTimeLessThanEqual(now)) {
+        for (BookingEventEntity booking : bookingRepository.findByMissedCheckInSentFalseAndStartTimeLessThanEqualAndTenantId(now, tenantId)) {
             TemplateResponse template = adminControlService.resolveTemplate(
                     "missed.checkin",
                     "Missed Check-In",

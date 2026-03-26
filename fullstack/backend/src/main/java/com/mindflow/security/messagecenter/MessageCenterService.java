@@ -2,6 +2,7 @@ package com.mindflow.security.messagecenter;
 
 import com.mindflow.security.common.OwnershipDeniedException;
 import com.mindflow.security.common.ResourceNotFoundException;
+import com.mindflow.security.common.TenantContext;
 import com.mindflow.security.message.MessagePrivacyService;
 import com.mindflow.security.message.SensitivityLevel;
 import com.mindflow.security.user.Role;
@@ -27,28 +28,32 @@ public class MessageCenterService {
 
     @Transactional(readOnly = true)
     public List<MessageResponse> listMessages(String username, Role role, MessageType type) {
+        String tenantId = TenantContext.getTenantId();
         List<MessageEntity> rows = type == null
-                ? messageRepository.findByUsernameOrderByCreatedAtDesc(username)
-                : messageRepository.findByUsernameAndTypeOrderByCreatedAtDesc(username, type);
+                ? messageRepository.findByUsernameAndTenantIdOrderByCreatedAtDesc(username, tenantId)
+                : messageRepository.findByUsernameAndTypeAndTenantIdOrderByCreatedAtDesc(username, type, tenantId);
         return rows.stream().map(row -> toResponse(row, role)).toList();
     }
 
     @Transactional
     public MessageResponse markRead(String username, Role role, Long id, boolean read) {
-        MessageEntity row = findOwned(username, id);
+        MessageEntity row = findOwned(username, id, TenantContext.getTenantId());
         row.setRead(read);
         return toResponse(messageRepository.save(row), role);
     }
 
     @Transactional
     public void delete(String username, Long id) {
-        MessageEntity row = findOwned(username, id);
+        MessageEntity row = findOwned(username, id, TenantContext.getTenantId());
         messageRepository.delete(row);
     }
 
-    private MessageEntity findOwned(String username, Long id) {
+    private MessageEntity findOwned(String username, Long id, String tenantId) {
         MessageEntity row = messageRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Message not found"));
+        if (!tenantId.equals(row.getTenantId())) {
+            throw new OwnershipDeniedException("Message access denied for this tenant");
+        }
         if (!row.getUsername().equals(username)) {
             throw new OwnershipDeniedException("Message access denied for this user");
         }

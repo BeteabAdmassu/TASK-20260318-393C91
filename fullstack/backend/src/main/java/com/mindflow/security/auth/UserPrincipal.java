@@ -14,12 +14,14 @@ public class UserPrincipal implements UserDetails {
     private final String passwordHash;
     private final Role role;
     private final boolean enabled;
+    private final String tenantId;
 
-    public UserPrincipal(String username, String passwordHash, Role role, boolean enabled) {
+    public UserPrincipal(String username, String passwordHash, Role role, boolean enabled, String tenantId) {
         this.username = username;
         this.passwordHash = passwordHash;
         this.role = role;
         this.enabled = enabled;
+        this.tenantId = tenantId;
     }
 
     @Override
@@ -59,5 +61,9 @@ public class UserPrincipal implements UserDetails {
 
     public Role getRole() {
         return role;
+    }
+
+    public String getTenantId() {
+        return tenantId;
     }
 }

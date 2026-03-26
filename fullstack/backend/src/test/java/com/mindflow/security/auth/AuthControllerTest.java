@@ -45,6 +45,7 @@ class AuthControllerTest {
         user.setPasswordHash(passwordEncoder.encode("dispatch123"));
         user.setRole(Role.DISPATCHER);
         user.setEnabled(true);
+        user.setTenantId("default");
         userRepository.save(user);
     }
 
@@ -75,5 +76,19 @@ class AuthControllerTest {
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(body))
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    void loginFailsValidationWhenPasswordTooShort() throws Exception {
+        String body = objectMapper.writeValueAsString(Map.of(
+                "username", "dispatcher01",
+                "password", "short"
+        ));
+
+        mockMvc.perform(post("/api/auth/login")
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(body))
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.code").value(400));
     }
 }

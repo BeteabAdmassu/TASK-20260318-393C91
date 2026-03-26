@@ -39,7 +39,7 @@ describe('Route Guards', () => {
     auth.authenticated = false;
     const result = TestBed.runInInjectionContext(() =>
       authGuard({} as never, { url: '/admin' } as never)
-    ) as { commands: unknown[] };
+    ) as unknown as { commands: unknown[] };
 
     expect(Array.isArray(result.commands)).toBeTrue();
   });

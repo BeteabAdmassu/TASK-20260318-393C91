@@ -1,4 +1,4 @@
-# MindFlow Authentication & Security Foundation
+# City Bus Operation and Service Coordination Platform
 
 This deliverable contains a local-only full stack implementation under `fullstack/`:
 
@@ -12,6 +12,15 @@ This deliverable contains a local-only full stack implementation under `fullstac
 cd fullstack
 cp .env.example .env
 docker-compose up --build
+```
+
+For full verification in one go:
+
+```bash
+cd fullstack
+bash ./run_tests.sh
+cd frontend
+npm test
 ```
 
 Services:
@@ -33,8 +42,9 @@ Configure via environment variables in `docker-compose.yml`:
 
 - JWT secret must be at least 256-bit base64 value (`JWT_SECRET`).
 - Password policy minimum length is 8.
+- Login request validation enforces minimum password length 8 at API contract level.
 - Role restrictions:
-  - Passenger endpoints: PASSENGER / DISPATCHER / ADMIN
+  - Passenger endpoints: PASSENGER only
   - Dispatcher endpoints: DISPATCHER / ADMIN
   - Admin endpoints: ADMIN only
 
@@ -118,9 +128,12 @@ Configure via environment variables in `docker-compose.yml`:
 ### Local PostgreSQL Backup Strategy
 
 - Backup: `fullstack/backup/backup_postgres.sh`
+- Backup with retention enforcement: `fullstack/backup/backup_postgres_with_retention.sh`
 - Restore: `fullstack/backup/restore_postgres.sh`
+- Retention policy document: `fullstack/ops/backup-retention-policy.md`
 - Example:
   - `bash fullstack/backup/backup_postgres.sh ./fullstack/backups`
+  - `RETENTION_DAYS=14 bash fullstack/backup/backup_postgres_with_retention.sh ./fullstack/backups`
   - `bash fullstack/backup/restore_postgres.sh ./fullstack/backups/<file>.sql`
 
 ## Test Determinism

@@ -6,11 +6,11 @@ import java.time.Instant;
 import java.util.List;
 
 public interface WorkflowTaskRepository extends JpaRepository<WorkflowTaskEntity, Long> {
-    List<WorkflowTaskEntity> findByStatusIn(List<WorkflowStatus> statuses);
+    List<WorkflowTaskEntity> findByStatusInAndTenantId(List<WorkflowStatus> statuses, String tenantId);
 
-    List<WorkflowTaskEntity> findByAssignedToOrderByCreatedAtDesc(String assignedTo);
+    List<WorkflowTaskEntity> findByAssignedToAndTenantIdOrderByCreatedAtDesc(String assignedTo, String tenantId);
 
-    List<WorkflowTaskEntity> findByCollaboratorsContainsOrderByCreatedAtDesc(String collaborator);
+    List<WorkflowTaskEntity> findByCollaboratorsContainsAndTenantIdOrderByCreatedAtDesc(String collaborator, String tenantId);
 
-    List<WorkflowTaskEntity> findByStatusInAndLastActionAtBefore(List<WorkflowStatus> statuses, Instant cutoff);
+    List<WorkflowTaskEntity> findByStatusInAndLastActionAtBeforeAndTenantId(List<WorkflowStatus> statuses, Instant cutoff, String tenantId);
 }

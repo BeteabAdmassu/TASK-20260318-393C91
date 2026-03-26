@@ -2,6 +2,7 @@ package com.mindflow.security.monitoring;
 
 import com.mindflow.security.messagecenter.MessageQueueEventRepository;
 import com.mindflow.security.messagecenter.QueueStatus;
+import com.mindflow.security.common.TenantContext;
 import io.micrometer.core.instrument.MeterRegistry;
 import io.micrometer.core.instrument.Timer;
 import io.micrometer.core.instrument.distribution.ValueAtPercentile;
@@ -44,7 +45,10 @@ public class ObservabilityService {
     @Scheduled(fixedDelayString = "${app.monitoring.check-ms:30000}")
     @Transactional
     public void evaluateAlerts() {
-        int backlog = queueEventRepository.findTop100ByStatusOrderByCreatedAtAsc(QueueStatus.PENDING).size();
+        int backlog = queueEventRepository.findTop100ByStatusAndTenantIdOrderByCreatedAtAsc(
+                QueueStatus.PENDING,
+                TenantContext.getTenantId()
+        ).size();
         meterRegistry.gauge("app.queue.backlog", backlog);
 
         if (backlog > properties.getQueueBacklogThreshold()) {

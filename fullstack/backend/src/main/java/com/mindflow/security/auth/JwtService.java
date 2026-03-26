@@ -23,12 +23,13 @@ public class JwtService {
         this.signingKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(properties.getSecret()));
     }
 
-    public String issueToken(String username, Role role) {
+    public String issueToken(String username, Role role, String tenantId) {
         Instant now = Instant.now();
         Instant expiry = now.plusSeconds(properties.getExpirationSeconds());
         return Jwts.builder()
                 .subject(username)
                 .claim("role", role.name())
+                .claim("tenant", tenantId)
                 .issuedAt(Date.from(now))
                 .expiration(Date.from(expiry))
                 .signWith(signingKey)

@@ -21,13 +21,13 @@ public class NotificationSettingsController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('PASSENGER', 'DISPATCHER', 'ADMIN')")
+    @PreAuthorize("hasRole('PASSENGER')")
     public ResponseEntity<NotificationPreferencesResponse> getPreferences(Authentication authentication) {
         return ResponseEntity.ok(preferenceService.getPreferences(authentication.getName()));
     }
 
     @PutMapping
-    @PreAuthorize("hasAnyRole('PASSENGER', 'DISPATCHER', 'ADMIN')")
+    @PreAuthorize("hasRole('PASSENGER')")
     public ResponseEntity<NotificationPreferencesResponse> updatePreferences(
             @Valid @RequestBody NotificationPreferencesRequest request,
             Authentication authentication) {

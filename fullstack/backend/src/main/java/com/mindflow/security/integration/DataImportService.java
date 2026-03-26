@@ -2,6 +2,11 @@ package com.mindflow.security.integration;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import net.sourceforge.pinyin4j.PinyinHelper;
+import net.sourceforge.pinyin4j.format.HanyuPinyinCaseType;
+import net.sourceforge.pinyin4j.format.HanyuPinyinOutputFormat;
+import net.sourceforge.pinyin4j.format.HanyuPinyinToneType;
+import net.sourceforge.pinyin4j.format.exception.BadHanyuPinyinOutputFormatCombination;
 import com.mindflow.security.admin.AdminControlService;
 import com.mindflow.security.search.TransitStopEntity;
 import com.mindflow.security.search.TransitStopRepository;
@@ -27,6 +32,7 @@ import java.util.regex.Pattern;
 public class DataImportService {
 
     private static final Pattern FIRST_NUMBER = Pattern.compile("\\d+(?:\\.\\d+)?");
+    private static final HanyuPinyinOutputFormat PINYIN_FORMAT = buildPinyinFormat();
 
     private final ImportJobRepository importJobRepository;
     private final CleanedRecordRepository cleanedRecordRepository;
@@ -252,7 +258,11 @@ public class DataImportService {
         if (value == null || value.isBlank()) {
             return "stop";
         }
-        String normalized = value.toLowerCase(Locale.ROOT).replaceAll("[^a-z0-9 ]", " ").replaceAll("\\s+", " ").trim();
+        String normalized = transliterateToLatin(value)
+                .toLowerCase(Locale.ROOT)
+                .replaceAll("[^a-z0-9 ]", " ")
+                .replaceAll("\\s+", " ")
+                .trim();
         return normalized.isBlank() ? "stop" : normalized;
     }
 
@@ -268,6 +278,46 @@ public class DataImportService {
             }
         }
         return initials.isEmpty() ? "s" : initials.toString();
+    }
+
+    private String transliterateToLatin(String value) {
+        if (value == null || value.isBlank()) {
+            return "";
+        }
+        StringBuilder out = new StringBuilder();
+        for (char ch : value.toCharArray()) {
+            if (isChineseCharacter(ch)) {
+                String[] pinyin;
+                try {
+                    pinyin = PinyinHelper.toHanyuPinyinStringArray(ch, PINYIN_FORMAT);
+                } catch (BadHanyuPinyinOutputFormatCombination ex) {
+                    pinyin = null;
+                }
+                if (pinyin != null && pinyin.length > 0) {
+                    out.append(pinyin[0]).append(' ');
+                }
+            } else if (Character.isLetterOrDigit(ch) || Character.isWhitespace(ch)) {
+                out.append(ch);
+            } else {
+                out.append(' ');
+            }
+        }
+        return out.toString();
+    }
+
+    private boolean isChineseCharacter(char ch) {
+        Character.UnicodeBlock block = Character.UnicodeBlock.of(ch);
+        return block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS
+                || block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_A
+                || block == Character.UnicodeBlock.CJK_UNIFIED_IDEOGRAPHS_EXTENSION_B
+                || block == Character.UnicodeBlock.CJK_COMPATIBILITY_IDEOGRAPHS;
+    }
+
+    private static HanyuPinyinOutputFormat buildPinyinFormat() {
+        HanyuPinyinOutputFormat format = new HanyuPinyinOutputFormat();
+        format.setCaseType(HanyuPinyinCaseType.LOWERCASE);
+        format.setToneType(HanyuPinyinToneType.WITHOUT_TONE);
+        return format;
     }
 
     private void versionFieldIfChanged(String stopName, String fieldName, String newValue, Long jobId) {

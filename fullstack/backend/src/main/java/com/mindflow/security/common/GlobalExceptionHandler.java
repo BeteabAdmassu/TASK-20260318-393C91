@@ -62,6 +62,11 @@ public class GlobalExceptionHandler {
         return error(HttpStatus.CONFLICT, ex.getMessage());
     }
 
+    @ExceptionHandler(ConcurrencyConflictException.class)
+    public ResponseEntity<ApiErrorResponse> handleConcurrencyConflict(ConcurrencyConflictException ex) {
+        return error(HttpStatus.CONFLICT, ex.getMessage());
+    }
+
     @ExceptionHandler(OwnershipDeniedException.class)
     public ResponseEntity<ApiErrorResponse> handleOwnershipDenied(OwnershipDeniedException ex) {
         return error(HttpStatus.FORBIDDEN, ex.getMessage());

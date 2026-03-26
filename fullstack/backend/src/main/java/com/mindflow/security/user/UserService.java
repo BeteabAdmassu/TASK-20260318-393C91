@@ -1,6 +1,7 @@
 package com.mindflow.security.user;
 
 import com.mindflow.security.common.ResourceConflictException;
+import com.mindflow.security.common.TenantContext;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -18,7 +19,8 @@ public class UserService {
 
     @Transactional
     public UserResponse createUser(CreateUserRequest request) {
-        userRepository.findByUsername(request.username()).ifPresent(existing -> {
+        String tenantId = TenantContext.getTenantId();
+        userRepository.findByUsernameAndTenantId(request.username(), tenantId).ifPresent(existing -> {
             throw new ResourceConflictException("Username already exists");
         });
         if (request.role() == null) {
@@ -33,6 +35,7 @@ public class UserService {
         user.setArrivalReminderEnabled(true);
         user.setReservationSuccessEnabled(true);
         user.setReminderLeadMinutes(10);
+        user.setTenantId(tenantId);
         UserEntity saved = userRepository.save(user);
 
         return new UserResponse(saved.getId(), saved.getUsername(), saved.getRole(), saved.isEnabled());

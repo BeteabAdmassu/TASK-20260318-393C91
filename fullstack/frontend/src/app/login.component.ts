@@ -3,6 +3,7 @@ import { FormBuilder, ReactiveFormsModule, Validators } from '@angular/forms';
 import { Router } from '@angular/router';
 import { NgIf } from '@angular/common';
 import { AuthService } from './auth.service';
+import { LoadingService } from './loading.service';
 
 @Component({
   selector: 'app-login',
@@ -50,7 +51,8 @@ export class LoginComponent {
   constructor(
     private readonly fb: FormBuilder,
     private readonly authService: AuthService,
-    private readonly router: Router
+    private readonly router: Router,
+    private readonly loadingService: LoadingService
   ) {}
 
   submit(): void {
@@ -58,15 +60,18 @@ export class LoginComponent {
       return;
     }
     this.loading = true;
+    this.loadingService.begin();
     this.error = '';
 
     this.authService.login(this.form.getRawValue()).subscribe({
       next: () => {
         this.loading = false;
+        this.loadingService.end();
         this.router.navigateByUrl('/dashboard');
       },
       error: () => {
         this.loading = false;
+        this.loadingService.end();
         this.error = 'Invalid username or password';
       }
     });

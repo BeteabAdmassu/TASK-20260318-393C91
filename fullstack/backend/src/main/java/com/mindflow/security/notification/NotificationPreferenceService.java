@@ -1,6 +1,7 @@
 package com.mindflow.security.notification;
 
 import com.mindflow.security.common.ResourceNotFoundException;
+import com.mindflow.security.common.TenantContext;
 import com.mindflow.security.user.UserEntity;
 import com.mindflow.security.user.UserRepository;
 import org.springframework.stereotype.Service;
@@ -64,7 +65,7 @@ public class NotificationPreferenceService {
     }
 
     private UserEntity findUser(String username) {
-        return userRepository.findByUsername(username)
+        return userRepository.findByUsernameAndTenantId(username, TenantContext.getTenantId())
                 .orElseThrow(() -> new ResourceNotFoundException("User not found"));
     }
 }

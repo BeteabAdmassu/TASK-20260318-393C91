@@ -21,7 +21,7 @@ public class AuthService {
                 new UsernamePasswordAuthenticationToken(request.username(), request.password())
         );
         UserPrincipal principal = (UserPrincipal) authentication.getPrincipal();
-        String token = jwtService.issueToken(principal.getUsername(), principal.getRole());
+        String token = jwtService.issueToken(principal.getUsername(), principal.getRole(), principal.getTenantId());
         return new LoginResponse(token, "Bearer", jwtService.getExpirationSeconds(), principal.getUsername(), principal.getRole());
     }
 }

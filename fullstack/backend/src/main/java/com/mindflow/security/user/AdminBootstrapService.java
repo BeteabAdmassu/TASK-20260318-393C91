@@ -5,6 +5,8 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.mindflow.security.common.TenantContext;
+
 @Component
 public class AdminBootstrapService {
 
@@ -29,7 +31,8 @@ public class AdminBootstrapService {
         if (properties.getPassword() == null || properties.getPassword().length() < 8) {
             throw new IllegalStateException("Bootstrap admin password must be at least 8 characters");
         }
-        userRepository.findByUsername(properties.getUsername()).ifPresentOrElse(
+        String tenantId = TenantContext.getTenantId();
+        userRepository.findByUsernameAndTenantId(properties.getUsername(), tenantId).ifPresentOrElse(
                 existing -> {
                 },
                 () -> {
@@ -41,6 +44,7 @@ public class AdminBootstrapService {
                     user.setArrivalReminderEnabled(true);
                     user.setReservationSuccessEnabled(true);
                     user.setReminderLeadMinutes(10);
+                    user.setTenantId(tenantId);
                     userRepository.save(user);
                 }
         );

@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 
 import com.mindflow.security.user.Role;
+import com.mindflow.security.common.TenantContext;
 
 @RestController
 @RequestMapping("/api/passenger/messages-center")
@@ -40,7 +41,7 @@ public class MessageCenterController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAnyRole('PASSENGER', 'DISPATCHER', 'ADMIN')")
+    @PreAuthorize("hasRole('PASSENGER')")
     public ResponseEntity<List<MessageResponse>> list(
             @RequestParam(name = "type", required = false) MessageType type,
             Authentication authentication) {
@@ -49,7 +50,7 @@ public class MessageCenterController {
     }
 
     @PutMapping("/{id}/read")
-    @PreAuthorize("hasAnyRole('PASSENGER', 'DISPATCHER', 'ADMIN')")
+    @PreAuthorize("hasRole('PASSENGER')")
     public ResponseEntity<MessageResponse> markRead(
             @PathVariable @Positive Long id,
             @Valid @RequestBody MessageReadRequest request,
@@ -59,7 +60,7 @@ public class MessageCenterController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAnyRole('PASSENGER', 'DISPATCHER', 'ADMIN')")
+    @PreAuthorize("hasRole('PASSENGER')")
     public ResponseEntity<Void> delete(
             @PathVariable @Positive Long id,
             Authentication authentication) {
@@ -68,7 +69,7 @@ public class MessageCenterController {
     }
 
     @PostMapping("/booking-events")
-    @PreAuthorize("hasAnyRole('PASSENGER', 'DISPATCHER', 'ADMIN')")
+    @PreAuthorize("hasRole('PASSENGER')")
     public ResponseEntity<Map<String, Long>> createBooking(
             @Valid @RequestBody BookingEventRequest request,
             Authentication authentication) {
@@ -81,6 +82,7 @@ public class MessageCenterController {
         event.setReservationSuccessSent(false);
         event.setArrivalReminderSent(false);
         event.setMissedCheckInSent(false);
+        event.setTenantId(TenantContext.getTenantId());
         BookingEventEntity saved = bookingRepository.save(event);
         return ResponseEntity.status(HttpStatus.CREATED).body(Map.of("bookingEventId", saved.getId()));
     }

@@ -1,5 +1,6 @@
 package com.mindflow.security.workflow;
 
+import com.mindflow.security.common.TenantScoped;
 import jakarta.persistence.Column;
 import jakarta.persistence.CollectionTable;
 import jakarta.persistence.ElementCollection;
@@ -13,6 +14,7 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 
 import java.time.Instant;
 import java.util.HashSet;
@@ -20,7 +22,7 @@ import java.util.Set;
 
 @Entity
 @Table(name = "workflow_tasks")
-public class WorkflowTaskEntity {
+public class WorkflowTaskEntity implements TenantScoped {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
@@ -78,6 +80,13 @@ public class WorkflowTaskEntity {
 
     @Column(name = "updated_at", nullable = false)
     private Instant updatedAt;
+
+    @Version
+    @Column(name = "entity_version", nullable = false)
+    private Long entityVersion;
+
+    @Column(name = "tenant_id", nullable = false, length = 64)
+    private String tenantId = "default";
 
     @PrePersist
     public void prePersist() {
@@ -226,5 +235,19 @@ public class WorkflowTaskEntity {
 
     public Instant getUpdatedAt() {
         return updatedAt;
+    }
+
+    public Long getEntityVersion() {
+        return entityVersion;
+    }
+
+    @Override
+    public String getTenantId() {
+        return tenantId;
+    }
+
+    @Override
+    public void setTenantId(String tenantId) {
+        this.tenantId = tenantId;
     }
 }

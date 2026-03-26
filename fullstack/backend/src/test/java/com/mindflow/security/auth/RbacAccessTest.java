@@ -54,7 +54,7 @@ class RbacAccessTest {
     void dispatcherCannotAccessAdminRoute() throws Exception {
         String token = authService.login(new LoginRequest("d_user", "dispatch123")).token();
         mockMvc.perform(get("/api/passenger/ping").header("Authorization", "Bearer " + token))
-                .andExpect(status().isOk());
+                .andExpect(status().isForbidden());
         mockMvc.perform(get("/api/dispatcher/ping").header("Authorization", "Bearer " + token))
                 .andExpect(status().isOk());
         mockMvc.perform(get("/api/admin/ping").header("Authorization", "Bearer " + token))
@@ -68,6 +68,7 @@ class RbacAccessTest {
         user.setPasswordHash(passwordEncoder.encode(password));
         user.setRole(role);
         user.setEnabled(true);
+        user.setTenantId("default");
         userRepository.save(user);
     }
 }

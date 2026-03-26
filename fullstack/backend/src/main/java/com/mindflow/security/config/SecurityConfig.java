@@ -1,6 +1,7 @@
 package com.mindflow.security.config;
 
 import com.mindflow.security.auth.JwtAuthenticationFilter;
+import com.mindflow.security.common.TenantContextFilter;
 import com.mindflow.security.monitoring.TraceContext;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.springframework.context.annotation.Bean;
@@ -26,10 +27,14 @@ import java.util.Map;
 public class SecurityConfig {
 
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
+    private final TenantContextFilter tenantContextFilter;
     private final UserDetailsService userDetailsService;
 
-    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter, UserDetailsService userDetailsService) {
+    public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter,
+                          TenantContextFilter tenantContextFilter,
+                          UserDetailsService userDetailsService) {
         this.jwtAuthenticationFilter = jwtAuthenticationFilter;
+        this.tenantContextFilter = tenantContextFilter;
         this.userDetailsService = userDetailsService;
     }
 
@@ -63,12 +68,13 @@ public class SecurityConfig {
                 )
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/login", "/", "/index.html", "/favicon.ico", "/actuator/health", "/actuator/info").permitAll()
-                        .requestMatchers("/api/passenger/**").hasAnyRole("PASSENGER", "DISPATCHER", "ADMIN")
-                        .requestMatchers("/api/passenger/preferences/**").hasAnyRole("PASSENGER", "DISPATCHER", "ADMIN")
+                        .requestMatchers("/api/passenger/**").hasRole("PASSENGER")
+                        .requestMatchers("/api/passenger/preferences/**").hasRole("PASSENGER")
                         .requestMatchers("/api/dispatcher/**").hasAnyRole("DISPATCHER", "ADMIN")
                         .requestMatchers("/api/admin/**").hasRole("ADMIN")
                         .anyRequest().authenticated())
                 .authenticationProvider(authenticationProvider())
+                .addFilterBefore(tenantContextFilter, UsernamePasswordAuthenticationFilter.class)
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
